@@ -129,8 +129,6 @@ def add_dice_to_roll(roll_df, to_add_dice):
 def reroll_dice(roll_df, results_to_reroll="blanks", reroll_count=1):
     if results_to_reroll == "blanks":
         results_to_reroll = ["B_blank", "R_blank"]
-    if results_to_reroll == "blanks":
-        results_to_reroll = ["R_acc", "U_acc"]
     initial_roll_df = roll_df.copy()
     dice_to_reroll = roll_df["value"].apply(
         lambda roll: value_str_to_list(roll)
@@ -154,23 +152,42 @@ def reroll_dice(roll_df, results_to_reroll="blanks", reroll_count=1):
     })
     return rerolled_df, initial_roll_df
 
+def filter_roll_for_value(roll_df, dice_result_str):
+    roll_df["val_to_check"] = dice_result_str
+    roll_df["contains"] = roll_df.apply(lambda x: all([val in x["value"].split(" ") for val in x["val_to_check"].split(" ")]), axis=1)
+    print(roll_df)
+    roll_df = roll_df.drop("val_to_check", axis=1)
+    to_return_df = roll_df[roll_df["contains"]]
+    to_return_df = to_return_df.drop("contains", axis=1)
+    print(to_return_df)
+    return to_return_df
+
 def filter_roll(roll_df, conditions_dict):
     for key in conditions_dict.keys():
-        operator = conditions_dict[key]["operator"]
-        amount = conditions_dict[key]["amount"]
-        print(f"filtering {operator} {amount} {key}")
-        if operator == "lt":
-            roll_df = roll_df[roll_df[key] < amount]
-        if operator == "lte":
-            roll_df = roll_df[roll_df[key] <= amount]
-        if operator == "gt":
-            roll_df = roll_df[roll_df[key] > amount]
-        if operator == "gte":
-            roll_df = roll_df[roll_df[key] >= amount]
-        if operator == "eq":
-            roll_df = roll_df[roll_df[key] == amount]
-        if operator == "neq":
-            roll_df = roll_df[roll_df[key] != amount]
+        if key == "value":
+            dice_result = conditions_dict[key]["result"]
+            print(f"filtering {key} contains {dice_result} ")
+            df_list = []
+            for vals_to_check in dice_result:
+                df_list.append(filter_roll_for_value(roll_df, vals_to_check))
+            roll_df = pd.concat(df_list).drop_duplicates().reset_index(drop=True)
+            print(roll_df)
+        else:
+            amount = conditions_dict[key]["amount"]
+            operator = conditions_dict[key]["operator"]
+            print(f"filtering {operator} {amount} {key}")
+            if operator == "lt":
+                roll_df = roll_df[roll_df[key] < amount]
+            if operator == "lte":
+                roll_df = roll_df[roll_df[key] <= amount]
+            if operator == "gt":
+                roll_df = roll_df[roll_df[key] > amount]
+            if operator == "gte":
+                roll_df = roll_df[roll_df[key] >= amount]
+            if operator == "eq":
+                roll_df = roll_df[roll_df[key] == amount]
+            if operator == "neq":
+                roll_df = roll_df[roll_df[key] != amount]
     return roll_df
 
 def average_damage(roll_df):
@@ -180,25 +197,20 @@ def average_damage(roll_df):
 
 def roll_proba(roll_df):
     proba = roll_df["proba"].sum()
-    print(f"proba for roll: {proba*100}")
+    print(f"proba for roll: {proba*100}%")
     return proba
 
 if __name__ == "__main__":
-    filter_4dmg_2acc = {
-        "acc": {
-            "operator": "gte",
-            "amount": 2
-        },
-        "damage": {
-            "operator": "gte",
-            "amount": 4
+    filter_1_double_or_acc = {
+        "value": {
+            "result": ["R_hit+hit R_acc", "R_hit+hit R_hit+hit"],
         }
     }
-    import timeit
-    start = timeit.default_timer()
-    roll_df = combine_dice(4, 5, 0)
-    roll_df, _ = reroll_dice(roll_df, ["R_blank"], 1)
-    stop = timeit.default_timer()
-    print('Time: ', stop - start)
-    filtered_roll = filter_roll(roll_df, filter_4dmg_2acc)
-    print(roll_proba(filtered_roll))
+
+    print("")
+    print("#########")
+    print("generating all outcomes for 5 red")
+    roll_df = combine_dice(5, 0, 0)
+    filtered_roll = filter_roll(roll_df, filter_1_double_or_acc)
+    print("chance for 2 double or 1 double + 1 acc")
+    roll_proba(filtered_roll)
