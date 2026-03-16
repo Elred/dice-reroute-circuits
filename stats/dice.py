@@ -1,5 +1,5 @@
 from ctypes import ArgumentError
-from profiles import red_die, blue_die, black_die
+from profiles import red_die_ship, blue_die_ship, black_die_ship, red_die_squad, blue_die_squad, black_die_squad
 import pandas as pd
 import numpy as np
 
@@ -17,23 +17,48 @@ def dice_to_dict(dice_profile):
         } for die_face in dice_profile
     }
 
-def value_to_dice_attr_dict(value_str):
-    if value_str in dice_to_dict(red_die).keys():
-        return dice_to_dict(red_die)[value_str]
-    if value_str in dice_to_dict(blue_die).keys():
-        return dice_to_dict(blue_die)[value_str]
-    if value_str in dice_to_dict(black_die).keys():
-        return dice_to_dict(black_die)[value_str]
+def value_to_dice_attr_dict(value_str, type_str):
+    if type_str == "ship":
+        if value_str in dice_to_dict(red_die_ship).keys():
+            return dice_to_dict(red_die_ship)[value_str]
+        if value_str in dice_to_dict(blue_die_ship).keys():
+            return dice_to_dict(blue_die_ship)[value_str]
+        if value_str in dice_to_dict(black_die_ship).keys():
+            return dice_to_dict(black_die_ship)[value_str]
+    elif type_str == "squad":
+        if value_str in dice_to_dict(red_die_squad).keys():
+            return dice_to_dict(red_die_squad)[value_str]
+        if value_str in dice_to_dict(blue_die_squad).keys():
+            return dice_to_dict(blue_die_squad)[value_str]
+        if value_str in dice_to_dict(black_die_squad).keys():
+            return dice_to_dict(black_die_squad)[value_str]
+    raise ArgumentError(f"value {value_str} not found in dice profiles")
 
-def value_to_dice_count_dict(value_str):
+def value_to_dice_count_dict(value_str, type_str="ship"):
     dice_result_list = value_str.split(" ")
+    if type_str == "ship":
+        red_die = red_die_ship
+        blue_die = blue_die_ship
+        black_die = black_die_ship
+    elif type_str == "squad":
+        red_die = red_die_squad
+        blue_die = blue_die_squad
+        black_die = black_die_squad
     red_dice_count = len([res for res in dice_result_list if res in [x["value"] for x in red_die]])
     blue_dice_count = len([res for res in dice_result_list if res in [x["value"] for x in blue_die]])
     black_dice_count = len([res for res in dice_result_list if res in [x["value"] for x in black_die]])
     return {"red": red_dice_count, "blue": blue_dice_count, "black": black_dice_count}
 
-def value_to_dice_count_str(value_str):
+def value_to_dice_count_str(value_str, type_str="ship"):
     dice_result_list = value_str.split(" ")
+    if type_str == "ship":
+        red_die = red_die_ship
+        blue_die = blue_die_ship
+        black_die = black_die_ship
+    elif type_str == "squad":
+        red_die = red_die_squad
+        blue_die = blue_die_squad
+        black_die = black_die_squad
     red_dice_count = len([res for res in dice_result_list if res in [x["value"] for x in red_die]])
     blue_dice_count = len([res for res in dice_result_list if res in [x["value"] for x in blue_die]])
     black_dice_count = len([res for res in dice_result_list if res in [x["value"] for x in black_die]])
@@ -71,11 +96,19 @@ def combine_two(roll_df_a, roll_df_b):
     })
     return comb_df
 
-def combine_dice(red_dice: int = 0, blue_dice: int = 0, black_dice: int = 0):
+def combine_dice(red_dice: int = 0, blue_dice: int = 0, black_dice: int = 0, type_str: str = "ship"):
     roll_df = None
     red_range = range(0, red_dice)
     blue_range = range(red_dice, red_dice+blue_dice)
     black_range = range(red_dice+blue_dice, red_dice+blue_dice+black_dice)
+    if type_str == "ship":
+        red_die = red_die_ship
+        blue_die = blue_die_ship
+        black_die = black_die_ship
+    elif type_str == "squad":
+        red_die = red_die_squad
+        blue_die = blue_die_squad
+        black_die = black_die_squad
     for idx in range(red_dice+blue_dice+black_dice):
         if idx == 0:
             if red_range:
@@ -96,16 +129,16 @@ def combine_dice(red_dice: int = 0, blue_dice: int = 0, black_dice: int = 0):
                 roll_df = combine_two(roll_df, dice_to_dataframe(black_die))
     return roll_df
 
-def remove_dice(roll_df, to_remove_dice):
+def remove_dice_from_roll(roll_df, to_remove_dice, type_str="ship"):
     kept_df = roll_df.copy()
     removed_df = roll_df.copy()
     removed_df["removed_dice"] = to_remove_dice
     removed_df = removed_df[removed_df["removed_dice"].apply(lambda x: True if type(x) is list else False)]
 
-    removed_df["to_remove_damage"] = removed_df.apply(lambda x: sum([value_to_dice_attr_dict(value)["damage"] for value in x["removed_dice"]]), axis=1)
-    removed_df["to_remove_crit"] = removed_df.apply(lambda x: sum([value_to_dice_attr_dict(value)["crit"] for value in x["removed_dice"]]), axis=1)
-    removed_df["to_remove_acc"] = removed_df.apply(lambda x: sum([value_to_dice_attr_dict(value)["acc"] for value in x["removed_dice"]]), axis=1)
-    removed_df["to_remove_blank"] = removed_df.apply(lambda x: sum([value_to_dice_attr_dict(value)["blank"] for value in x["removed_dice"]]), axis=1)
+    removed_df["to_remove_damage"] = removed_df.apply(lambda x: sum([value_to_dice_attr_dict(value, type_str)["damage"] for value in x["removed_dice"]]), axis=1)
+    removed_df["to_remove_crit"] = removed_df.apply(lambda x: sum([value_to_dice_attr_dict(value, type_str)["crit"] for value in x["removed_dice"]]), axis=1)
+    removed_df["to_remove_acc"] = removed_df.apply(lambda x: sum([value_to_dice_attr_dict(value, type_str)["acc"] for value in x["removed_dice"]]), axis=1)
+    removed_df["to_remove_blank"] = removed_df.apply(lambda x: sum([value_to_dice_attr_dict(value, type_str)["blank"] for value in x["removed_dice"]]), axis=1)
 
     removed_df["value"] = removed_df.apply(lambda x: " ".join(sorted([value for value in value_str_to_list(x["value"]) if value not in x["removed_dice"]])), axis=1)
     removed_df["damage"] = removed_df["damage"] - removed_df["to_remove_damage"]
@@ -121,21 +154,22 @@ def remove_dice(roll_df, to_remove_dice):
     kept_df = kept_df.drop("removed_dice", axis=1)
     return removed_df, kept_df
 
-def add_dice_to_roll(roll_df, to_add_dice):
+def add_dice_to_roll(roll_df, to_add_dice, type_str="ship"):
     dice_dict = value_to_dice_count_dict(to_add_dice)
     rr_dice_df = combine_dice(dice_dict["red"], dice_dict["blue"], dice_dict["black"])
     return combine_two(roll_df, rr_dice_df)
 
-def reroll_dice(roll_df, results_to_reroll="blanks", reroll_count=1):
+def reroll_dice(roll_df, results_to_reroll="blanks", reroll_count=1, type_str="ship"):
     if results_to_reroll == "blanks":
         results_to_reroll = ["B_blank", "R_blank"]
     initial_roll_df = roll_df.copy()
     dice_to_reroll = roll_df["value"].apply(
         lambda roll: value_str_to_list(roll)
+
     ).apply(
         lambda roll: sorted([res for res in roll if res in results_to_reroll], key=lambda n: results_to_reroll.index(n))[0:reroll_count]
-    ).apply(lambda roll: roll if len(roll) > 0 else np.NaN).dropna()
-    rr_df, no_rr_df = remove_dice(roll_df, dice_to_reroll)
+    ).apply(lambda roll: roll if len(roll) > 0 else np.nan).dropna()
+    rr_df, no_rr_df = remove_dice_from_roll(roll_df, dice_to_reroll, type_str)
 
     rerolls_types = rr_df["removed_dice"].unique()
     rrd_df_list = []
@@ -152,14 +186,24 @@ def reroll_dice(roll_df, results_to_reroll="blanks", reroll_count=1):
     })
     return rerolled_df, initial_roll_df
 
+def cancel_dice(roll_df, results_to_cancel="blanks", cancel_count=1, type_str="ship"):
+    if results_to_cancel == "blanks":
+        results_to_cancel = ["B_blank", "R_blank"]
+    initial_roll_df = roll_df.copy()
+    dice_to_cancel = roll_df["value"].apply(
+        lambda roll: value_str_to_list(roll)
+    ).apply(
+        lambda roll: sorted([res for res in roll if res in results_to_cancel], key=lambda n: results_to_cancel.index(n))[0:cancel_count]
+    ).apply(lambda roll: roll if len(roll) > 0 else np.nan).dropna()
+    cancelled_df, initial_roll_df = remove_dice_from_roll(roll_df, dice_to_cancel, type_str)
+    return cancelled_df, initial_roll_df
+
 def filter_roll_for_value(roll_df, dice_result_str):
     roll_df["val_to_check"] = dice_result_str
     roll_df["contains"] = roll_df.apply(lambda x: all([val in x["value"].split(" ") for val in x["val_to_check"].split(" ")]), axis=1)
-    print(roll_df)
     roll_df = roll_df.drop("val_to_check", axis=1)
     to_return_df = roll_df[roll_df["contains"]]
     to_return_df = to_return_df.drop("contains", axis=1)
-    print(to_return_df)
     return to_return_df
 
 def filter_roll(roll_df, conditions_dict):
@@ -200,17 +244,39 @@ def roll_proba(roll_df):
     print(f"proba for roll: {proba*100}%")
     return proba
 
-if __name__ == "__main__":
-    filter_1_double_or_acc = {
-        "value": {
-            "result": ["R_hit+hit R_acc", "R_hit+hit R_hit+hit"],
-        }
-    }
+def main():
+    type_str = "ship"
+    sato_cancel_priority = [
+        "R_blank",
+        "B_blank",
+        "R_acc",
+        "U_acc",
+        "R_hit",
+        "U_hit",
+        "B_hit",
+        "R_crit",
+        "U_crit",
+        "R_hit+hit",
+        "B_hit+crit",
+    ]
 
-    print("")
     print("#########")
-    print("generating all outcomes for 5 red")
-    roll_df = combine_dice(5, 0, 0)
-    filtered_roll = filter_roll(roll_df, filter_1_double_or_acc)
-    print("chance for 2 double or 1 double + 1 acc")
-    roll_proba(filtered_roll)
+    print("Scenario: Salvation + OLD Sato")
+    print("Step 1) Initial roll: 1 red 2 black dice")
+    roll_df = combine_dice(1, 0, 2, type_str)
+    average_damage(roll_df)
+
+    print("#########")
+    print("Scenario: Salvation + ARC Sato")
+    print("Step 1) Initial roll: 3 red dice")
+    roll_df = combine_dice(3, 0, 0, type_str)
+    average_damage(roll_df)
+
+    print("\nStep 2) Sato 2 black dice")
+    roll_df = add_dice_to_roll(roll_df, "B_blank B_blank", type_str)
+    roll_df, _ = cancel_dice(roll_df, sato_cancel_priority, 2, type_str)
+    average_damage(roll_df)
+    
+
+if __name__ == "__main__":
+    main()

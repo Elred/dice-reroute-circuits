@@ -1,4 +1,4 @@
-red_die = [
+red_die_ship = [
     {
         "value": "R_blank",
         "proba": 0.25,
@@ -40,8 +40,7 @@ red_die = [
         "blank": 0
     }
 ]
-
-blue_die = [
+blue_die_ship = [
     {
         "value": "U_hit",
         "proba": 0.5,
@@ -67,8 +66,7 @@ blue_die = [
         "blank": 0
     }
 ]
-
-black_die = [
+black_die_ship = [
     {
         "value": "B_blank",
         "proba": 0.25,
@@ -89,6 +87,101 @@ black_die = [
         "value": "B_hit+crit",
         "proba": 0.25,
         "damage": 2,
+        "crit": 1,
+        "acc": 0,
+        "blank": 0
+    }
+]
+
+red_die_squad = [
+    {
+        "value": "R_blank",
+        "proba": 0.25,
+        "damage": 0,
+        "crit": 0,
+        "acc": 0,
+        "blank": 1
+    },
+    {
+        "value": "R_hit",
+        "proba": 0.25,
+        "damage": 1,
+        "crit": 0,
+        "acc": 0,
+        "blank": 0
+    },
+    {
+        "value": "R_crit",
+        "proba": 0.25,
+        "damage": 0,
+        "crit": 0,
+        "acc": 0,
+        "blank": 0
+    },
+    {
+        "value": "R_acc",
+        "proba": 0.125,
+        "damage": 0,
+        "crit": 0,
+        "acc": 1,
+        "blank": 0
+    },
+    {
+        "value": "R_hit+hit",
+        "proba": 0.125,
+        "damage": 2,
+        "crit": 0,
+        "acc": 0,
+        "blank": 0
+    }
+]
+blue_die_squad = [
+    {
+        "value": "U_hit",
+        "proba": 0.5,
+        "damage": 1,
+        "crit": 0,
+        "acc": 0,
+        "blank": 0
+    },
+    {
+        "value": "U_crit",
+        "proba": 0.25,
+        "damage": 0,
+        "crit": 0,
+        "acc": 0,
+        "blank": 0
+    },
+    {
+        "value": "U_acc",
+        "proba": 0.25,
+        "damage": 0,
+        "crit": 0,
+        "acc": 1,
+        "blank": 0
+    }
+]
+black_die_squad = [
+    {
+        "value": "B_blank",
+        "proba": 0.25,
+        "damage": 0,
+        "crit": 0,
+        "acc": 0,
+        "blank": 1
+    },
+    {
+        "value": "B_hit",
+        "proba": 0.5,
+        "damage": 1,
+        "crit": 0,
+        "acc": 0,
+        "blank": 0
+    },
+    {
+        "value": "B_hit+crit",
+        "proba": 0.25,
+        "damage": 1,
         "crit": 0,
         "acc": 0,
         "blank": 0
