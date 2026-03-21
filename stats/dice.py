@@ -154,9 +154,9 @@ def remove_dice_from_roll(roll_df, to_remove_dice, type_str="ship"):
     kept_df = kept_df.drop("removed_dice", axis=1)
     return removed_df, kept_df
 
-def add_dice_to_roll(roll_df, to_add_dice, type_str="ship"):
-    dice_dict = value_to_dice_count_dict(to_add_dice)
-    rr_dice_df = combine_dice(dice_dict["red"], dice_dict["blue"], dice_dict["black"])
+def add_dice_to_roll(roll_df, red: int = 0, blue: int = 0, black: int = 0, type_str: str = "ship"):
+    """Add fresh dice of the given color counts to the roll and combine distributions."""
+    rr_dice_df = combine_dice(red, blue, black, type_str)
     return combine_two(roll_df, rr_dice_df)
 
 def reroll_dice(roll_df, results_to_reroll="blanks", reroll_count=1, type_str="ship"):
@@ -174,7 +174,14 @@ def reroll_dice(roll_df, results_to_reroll="blanks", reroll_count=1, type_str="s
     rerolls_types = rr_df["removed_dice"].unique()
     rrd_df_list = []
     for reroll in rerolls_types:
-        subrrd_df = add_dice_to_roll(rr_df[rr_df["removed_dice"] == reroll], reroll)
+        dice_dict = value_to_dice_count_dict(reroll, type_str)
+        subrrd_df = add_dice_to_roll(
+            rr_df[rr_df["removed_dice"] == reroll],
+            red=dice_dict["red"],
+            blue=dice_dict["blue"],
+            black=dice_dict["black"],
+            type_str=type_str,
+        )
         rrd_df_list.append(subrrd_df)
     rerolled_df = pd.concat([no_rr_df]+rrd_df_list)
     rerolled_df = rerolled_df.groupby("value", as_index=False).agg({
@@ -273,7 +280,7 @@ def main():
     average_damage(roll_df)
 
     print("\nStep 2) Sato 2 black dice")
-    roll_df = add_dice_to_roll(roll_df, "B_blank B_blank", type_str)
+    roll_df = add_dice_to_roll(roll_df, red=0, blue=0, black=2, type_str=type_str)
     roll_df, _ = cancel_dice(roll_df, sato_cancel_priority, 2, type_str)
     average_damage(roll_df)
     

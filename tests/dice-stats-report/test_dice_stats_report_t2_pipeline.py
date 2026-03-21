@@ -72,15 +72,15 @@ class TestApplyOperationAddDice(unittest.TestCase):
         self.roll = combine_dice(1, 0, 0, "ship")
 
     def test_returns_dataframe(self):
-        result = apply_operation(self.roll, Operation(type="add_dice", applicable_results=["B_blank B_blank"]), "ship")
+        result = apply_operation(self.roll, Operation(type="add_dice", dice_to_add={"black": 2}), "ship")
         self.assertTrue(hasattr(result, "columns"))
 
     def test_probabilities_sum_to_one(self):
-        result = apply_operation(self.roll, Operation(type="add_dice", applicable_results=["B_blank B_blank"]), "ship")
+        result = apply_operation(self.roll, Operation(type="add_dice", dice_to_add={"black": 2}), "ship")
         self.assertAlmostEqual(result["proba"].sum(), 1.0, delta=TOL)
 
     def test_value_has_more_tokens(self):
-        result = apply_operation(self.roll, Operation(type="add_dice", applicable_results=["B_blank B_blank"]), "ship")
+        result = apply_operation(self.roll, Operation(type="add_dice", dice_to_add={"black": 2}), "ship")
         sample_val = result["value"].iloc[0]
         self.assertGreaterEqual(len(sample_val.split()), 2)
 
@@ -169,11 +169,11 @@ _INTEGRITY_CASES = [
     ("cancel 1 blank, 2R squad",      (2, 0, 0, "squad"), Operation(type="cancel", count=1, priority_list=["R_blank"])),
     ("cancel 1 blank, 1R1B squad",    (1, 0, 1, "squad"), Operation(type="cancel", count=1, priority_list=["R_blank", "B_blank"])),
     # add_dice
-    ("add_dice B_blank, 1R ship",         (1, 0, 0, "ship"),  Operation(type="add_dice", applicable_results=["B_blank"])),
-    ("add_dice R_blank, 1U ship",         (0, 1, 0, "ship"),  Operation(type="add_dice", applicable_results=["R_blank"])),
-    ("add_dice B_blank B_blank, 2R ship", (2, 0, 0, "ship"),  Operation(type="add_dice", applicable_results=["B_blank B_blank"])),
-    ("add_dice R_blank, 1B squad",        (0, 0, 1, "squad"), Operation(type="add_dice", applicable_results=["R_blank"])),
-    ("add_dice U_hit, 1R1B ship",         (1, 0, 1, "ship"),  Operation(type="add_dice", applicable_results=["U_hit"])),
+    ("add_dice 1B, 1R ship",          (1, 0, 0, "ship"),  Operation(type="add_dice", dice_to_add={"black": 1})),
+    ("add_dice 1R, 1U ship",          (0, 1, 0, "ship"),  Operation(type="add_dice", dice_to_add={"red": 1})),
+    ("add_dice 2B, 2R ship",          (2, 0, 0, "ship"),  Operation(type="add_dice", dice_to_add={"black": 2})),
+    ("add_dice 1R, 1B squad",         (0, 0, 1, "squad"), Operation(type="add_dice", dice_to_add={"red": 1})),
+    ("add_dice 1U, 1R1B ship",        (1, 0, 1, "ship"),  Operation(type="add_dice", dice_to_add={"blue": 1})),
 ]
 
 

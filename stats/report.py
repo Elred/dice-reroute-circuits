@@ -6,7 +6,7 @@ Run from the stats/ directory:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 import pandas as pd
 
 from dice import combine_dice, reroll_dice, cancel_dice, add_dice_to_roll
@@ -67,11 +67,13 @@ class Operation:
     count: int = 1
     # For reroll/cancel: the whitelist of face value strings this operation is allowed to touch.
     # The strategy determines the order; applicable_results gates which faces are eligible.
-    # For add_dice: list with a single space-separated value string (e.g. ["B_blank B_blank"]).
     applicable_results: List[str] = field(default_factory=list)
     # Resolved priority list — populated by build_strategy_pipeline from the strategy ordering
     # filtered to applicable_results. Used by apply_operation. Never set manually.
     priority_list: List[str] = field(default_factory=list)
+    # For add_dice: explicit color counts, e.g. {"red": 0, "blue": 0, "black": 2}.
+    # Required when type == "add_dice"; ignored for reroll/cancel.
+    dice_to_add: Optional[Dict[str, int]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -140,7 +142,7 @@ def apply_operation(roll_df, operation: "Operation", type_str: str):
 
     - reroll  → reroll_dice(roll_df, results_to_reroll, reroll_count, type_str)
     - cancel  → cancel_dice(roll_df, results_to_cancel, cancel_count, type_str)
-    - add_dice → add_dice_to_roll(roll_df, to_add_dice, type_str)
+    - add_dice → add_dice_to_roll(roll_df, red, blue, black, type_str)  [from op.dice_to_add]
 
     Both reroll_dice and cancel_dice return (result_df, initial_df); we keep
     only result_df.  add_dice_to_roll returns a single DataFrame.
@@ -175,9 +177,14 @@ def apply_operation(roll_df, operation: "Operation", type_str: str):
         return result_df
 
     elif operation.type == "add_dice":
-        # applicable_results holds a single space-separated value string, e.g. ["B_blank B_blank"]
-        to_add = operation.applicable_results[0] if operation.applicable_results else ""
-        return add_dice_to_roll(roll_df, to_add, type_str)
+        d = operation.dice_to_add or {}
+        return add_dice_to_roll(
+            roll_df,
+            red=d.get("red", 0),
+            blue=d.get("blue", 0),
+            black=d.get("black", 0),
+            type_str=type_str,
+        )
 
     else:
         raise ValueError(f"Unknown operation type '{operation.type}'.")
@@ -252,6 +259,11 @@ def crit_probability(roll_df) -> float:
     Requirements: 5.1, 5.2
     """
     return float(roll_df.loc[roll_df["crit"] >= 1, "proba"].sum())
+
+
+def average_damage(roll_df) -> float:
+    """Return E[damage] = sum(damage * proba) across all outcomes."""
+    return float((roll_df["damage"] * roll_df["proba"]).sum())
 
 
 # ---------------------------------------------------------------------------
@@ -377,6 +389,7 @@ def build_strategy_pipeline(
                 count=op.count,
                 applicable_results=list(op.applicable_results),
                 priority_list=list(op.priority_list),
+                dice_to_add=dict(op.dice_to_add) if op.dice_to_add is not None else None,
             ))
     return result
 
@@ -430,6 +443,7 @@ def generate_report(
             "damage": cumulative_damage(final_df),
             "accuracy": cumulative_accuracy(final_df),
             "crit": crit_probability(final_df),
+            "avg_damage": average_damage(final_df),
             "priority_list": priority_list,
         })
     return variants
@@ -450,8 +464,9 @@ def _format_pipeline(pipeline: List[Operation]) -> str:
             faces = ", ".join(op.applicable_results)
             parts.append(f"{op.type} x{op.count} [{faces}]")
         elif op.type == "add_dice":
-            dice_str = op.applicable_results[0] if op.applicable_results else ""
-            parts.append(f"add_dice [{dice_str}]")
+            d = op.dice_to_add or {}
+            r, u, b = d.get("red", 0), d.get("blue", 0), d.get("black", 0)
+            parts.append(f"add_dice [{r}R {u}U {b}B]")
         else:
             parts.append(op.type)
     return " | ".join(parts)
@@ -497,19 +512,23 @@ def format_report(
         # Cumulative damage table — req 7.3
         lines.append("Cumulative Damage:")
         for threshold, prob in variant["damage"]:
-            lines.append(f"  >= {threshold}:  {prob * 100:.1f}%")
+            lines.append(f"  >= {threshold}:  {prob * 100:.2f}%")
 
         lines.append("")
 
         # Cumulative accuracy table — req 7.4
         lines.append("Cumulative Accuracy:")
         for threshold, prob in variant["accuracy"]:
-            lines.append(f"  >= {threshold}:  {prob * 100:.1f}%")
+            lines.append(f"  >= {threshold}:  {prob * 100:.2f}%")
 
         lines.append("")
 
         # Crit probability — req 7.5
-        lines.append(f"Crit Probability: {variant['crit'] * 100:.1f}%")
+        lines.append(f"Crit Probability: {variant['crit'] * 100:.2f}%")
+
+        # Average damage
+        if "avg_damage" in variant:
+            lines.append(f"Average Damage:   {variant['avg_damage']:.2f}")
 
         # Separator between variants — req 7.6
         if has_multiple and i < len(variants) - 1:
@@ -524,14 +543,12 @@ def main():
     Sample scenario: 3 Red + 2 Blue ship dice, reroll up to 2 blanks, with all strategies.
     applicable_results scopes the reroll to blanks only; strategy determines order within that set.
     """
-    pool = DicePool(red=3, blue=2, black=0, type="ship")
+    pool = DicePool(red=0, blue=1, black=0, type="ship")
 
-    pool_results = list(_face_values_for_pool(pool.red, pool.blue, pool.black, pool.type))
     pipeline = [
-        Operation(type="reroll", count=2, applicable_results=pool_results),
+        Operation(type="add_dice", dice_to_add={"red": 0, "blue": 1, "black": 0}),
     ]
-
-    strategies = ["max_damage", "max_accuracy", "max_crits"]
+    strategies = ["max_damage"]
 
     variants = generate_report(pool, pipeline, strategies)
     output = format_report(pool, pipeline, variants)

@@ -124,7 +124,7 @@ ship_all_faces = [
 
 base_pipeline = [
     Operation(type="reroll", count=2, applicable_results=ship_all_faces),
-    Operation(type="add_dice", count=1, applicable_results=["B_blank"]),
+    Operation(type="add_dice", dice_to_add={"black": 1}),
     Operation(type="cancel", count=1, applicable_results=ship_all_faces),
 ]
 
@@ -142,8 +142,8 @@ check(
     set(result[0].applicable_results) == set(ship_all_faces),
 )
 check(
-    "build_strategy_pipeline: add_dice applicable_results unchanged",
-    result[1].applicable_results == ["B_blank"],
+    "build_strategy_pipeline: add_dice dice_to_add unchanged",
+    result[1].dice_to_add == {"black": 1},
 )
 check(
     "build_strategy_pipeline: cancel priority_list matches strategy",
@@ -202,7 +202,7 @@ check(
 pool = DicePool(red=2, blue=1, black=0, type="ship")
 
 # add_dice-only pipeline
-no_prio_pipeline = [Operation(type="add_dice", count=1, applicable_results=["B_blank"])]
+no_prio_pipeline = [Operation(type="add_dice", dice_to_add={"black": 1})]
 variants = generate_report(pool, no_prio_pipeline, ["max_damage"])
 check("generate_report: 1 variant for 1 strategy", len(variants) == 1)
 check("generate_report: variant label is strategy name", variants[0]["label"] == "max_damage")

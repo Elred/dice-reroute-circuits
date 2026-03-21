@@ -104,32 +104,32 @@ check(
 # ---------------------------------------------------------------------------
 
 check(
-    "damage table row >= 0 shows 100.0%",
-    "100.0%" in output_single,
+    "damage table row >= 0 shows 100.00%",
+    "100.00%" in output_single,
     f"output={output_single!r}",
 )
 check(
-    "damage table row >= 1 shows 75.3%",
-    "75.3%" in output_single,
+    "damage table row >= 1 shows 75.30%",
+    "75.30%" in output_single,
     f"output={output_single!r}",
 )
 check(
-    "damage table row >= 2 shows 43.8%",
-    "43.8%" in output_single,
+    "damage table row >= 2 shows 43.80%",
+    "43.80%" in output_single,
     f"output={output_single!r}",
 )
 
 # Accuracy table
 check(
-    "accuracy table row >= 1 shows 18.8%",
-    "18.8%" in output_single,
+    "accuracy table row >= 1 shows 18.80%",
+    "18.80%" in output_single,
     f"output={output_single!r}",
 )
 
 # Crit probability line
 check(
-    "crit probability shows 43.8%",
-    "Crit Probability: 43.8%" in output_single,
+    "crit probability shows 43.80%",
+    "Crit Probability: 43.80%" in output_single,
     f"output={output_single!r}",
 )
 

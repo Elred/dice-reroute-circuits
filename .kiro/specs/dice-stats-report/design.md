@@ -61,10 +61,12 @@ class Operation:
     applicable_results: List[str] = field(default_factory=list)
     # reroll/cancel: user-defined whitelist of face values this op is allowed to target.
     #   Validated against the pool's profile. Never overwritten by strategy resolution.
-    # add_dice: single-element list with a space-separated value string, e.g. ["B_blank B_blank"]
     priority_list:      List[str] = field(default_factory=list)
     # Resolved at runtime by build_strategy_pipeline: strategy ordering filtered to
     # applicable_results. Used by apply_operation. Not set manually by callers.
+    dice_to_add:        Optional[Dict[str, int]] = None
+    # add_dice: explicit color counts, e.g. {"red": 0, "blue": 0, "black": 2}.
+    # Required when type == "add_dice"; ignored for reroll/cancel.
 ```
 
 ---
@@ -94,7 +96,7 @@ Dispatches to existing `dice.py` functions:
 |------------|------------------------|-----------------------------------------------------|
 | `reroll`   | `reroll_dice()`        | `results_to_reroll=op.priority_list`, `reroll_count=op.count` |
 | `cancel`   | `cancel_dice()`        | `results_to_cancel=op.priority_list`, `cancel_count=op.count` |
-| `add_dice` | `add_dice_to_roll()`   | `to_add_dice=op.applicable_results[0]`              |
+| `add_dice` | `add_dice_to_roll()`   | `red/blue/black` from `op.dice_to_add`, `type_str` |
 
 `priority_list` is the resolved list produced by `build_strategy_pipeline` — it contains only the faces from `applicable_results`, ordered by the active strategy. `apply_operation` never reads `applicable_results` directly for reroll/cancel.
 
