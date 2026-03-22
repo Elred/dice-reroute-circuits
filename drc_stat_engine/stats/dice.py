@@ -1,5 +1,5 @@
 from ctypes import ArgumentError
-from profiles import red_die_ship, blue_die_ship, black_die_ship, red_die_squad, blue_die_squad, black_die_squad
+from drc_stat_engine.stats.profiles import red_die_ship, blue_die_ship, black_die_ship, red_die_squad, blue_die_squad, black_die_squad
 import pandas as pd
 import numpy as np
 
@@ -135,6 +135,10 @@ def remove_dice_from_roll(roll_df, to_remove_dice, type_str="ship"):
     removed_df["removed_dice"] = to_remove_dice
     removed_df = removed_df[removed_df["removed_dice"].apply(lambda x: True if type(x) is list else False)]
 
+    if removed_df.empty:
+        kept_df = kept_df.drop("removed_dice", axis=1) if "removed_dice" in kept_df.columns else kept_df
+        return removed_df, roll_df.copy()
+
     removed_df["to_remove_damage"] = removed_df.apply(lambda x: sum([value_to_dice_attr_dict(value, type_str)["damage"] for value in x["removed_dice"]]), axis=1)
     removed_df["to_remove_crit"] = removed_df.apply(lambda x: sum([value_to_dice_attr_dict(value, type_str)["crit"] for value in x["removed_dice"]]), axis=1)
     removed_df["to_remove_acc"] = removed_df.apply(lambda x: sum([value_to_dice_attr_dict(value, type_str)["acc"] for value in x["removed_dice"]]), axis=1)
@@ -156,6 +160,8 @@ def remove_dice_from_roll(roll_df, to_remove_dice, type_str="ship"):
 
 def add_dice_to_roll(roll_df, red: int = 0, blue: int = 0, black: int = 0, type_str: str = "ship"):
     """Add fresh dice of the given color counts to the roll and combine distributions."""
+    if red == 0 and blue == 0 and black == 0:
+        return roll_df
     rr_dice_df = combine_dice(red, blue, black, type_str)
     return combine_two(roll_df, rr_dice_df)
 
@@ -170,6 +176,10 @@ def reroll_dice(roll_df, results_to_reroll="blanks", reroll_count=1, type_str="s
         lambda roll: sorted([res for res in roll if res in results_to_reroll], key=lambda n: results_to_reroll.index(n))[0:reroll_count]
     ).apply(lambda roll: roll if len(roll) > 0 else np.nan).dropna()
     rr_df, no_rr_df = remove_dice_from_roll(roll_df, dice_to_reroll, type_str)
+
+    if rr_df.empty:
+        # Nothing matched — return original roll unchanged
+        return initial_roll_df, initial_roll_df
 
     rerolls_types = rr_df["removed_dice"].unique()
     rrd_df_list = []
@@ -202,6 +212,10 @@ def cancel_dice(roll_df, results_to_cancel="blanks", cancel_count=1, type_str="s
     ).apply(
         lambda roll: sorted([res for res in roll if res in results_to_cancel], key=lambda n: results_to_cancel.index(n))[0:cancel_count]
     ).apply(lambda roll: roll if len(roll) > 0 else np.nan).dropna()
+    if dice_to_cancel.empty:
+        # No matching faces — nothing to cancel; return empty cancelled_df and full kept_df
+        empty_df = roll_df.iloc[0:0].copy()
+        return empty_df, initial_roll_df
     cancelled_df, initial_roll_df = remove_dice_from_roll(roll_df, dice_to_cancel, type_str)
     return cancelled_df, initial_roll_df
 

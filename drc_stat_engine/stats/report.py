@@ -9,8 +9,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 import pandas as pd
 
-from dice import combine_dice, reroll_dice, cancel_dice, add_dice_to_roll
-from profiles import (
+from drc_stat_engine.stats.dice import combine_dice, reroll_dice, cancel_dice, add_dice_to_roll
+from drc_stat_engine.stats.profiles import (
     red_die_ship, blue_die_ship, black_die_ship,
     red_die_squad, blue_die_squad, black_die_squad,
 )
