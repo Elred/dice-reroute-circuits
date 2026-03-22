@@ -1,7 +1,7 @@
 """
-Checkpoint test runner — runs all dice-stats-report tests.
-Run from stats/ directory:
-    /home/elred/.virtualenvs/drc/bin/python -m unittest tests.test_dice_stats_report_checkpoint
+Checkpoint test runner — runs all dice_stat_report tests (t1, t2, t3).
+Run from project root:
+    /home/elred/.virtualenvs/drc/bin/python drc_stat_engine/tests/dice_stat_report/test_dice_stats_report_t4_checkpoint.py
 """
 import sys
 import os
