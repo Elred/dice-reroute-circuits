@@ -131,6 +131,7 @@ dmypy.json
 # Node
 node_modules/
 drc_front/dist/
+drc_front/.vite
 
 # Editor / IDE
 .vscode/
