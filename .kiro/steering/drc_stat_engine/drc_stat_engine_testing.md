@@ -11,7 +11,7 @@ source ~/.virtualenvs/drc/bin/activate
 
 - Only run **one-liners** directly in the terminal after an import, e.g.:
   ```
-  python -c "import sys; sys.path.insert(0, 'stats'); from dice import combine_dice; print(combine_dice(1,0,0,'ship').shape)"
+  python -c "import sys; sys.path.insert(0, 'drc_stat_engine/stats'); from dice import combine_dice; print(combine_dice(1,0,0,'ship').shape)"
   ```
 - Never run multi-line scripts inline in the terminal.
 
@@ -19,18 +19,19 @@ source ~/.virtualenvs/drc/bin/activate
 
 - For anything beyond a one-liner, **create a test script** following the naming convention `test_{spec_name}_{feature}.py` where `{feature}` is a short human-readable name for what is being tested (e.g. `test_dice_stats_report_validation.py`, `test_dice_stats_report_pipeline.py`). Use underscores only — hyphens and dots in filenames break Python's module import system.
 - Do not use task numbers in test file names — use descriptive names that reflect the functionality being tested.
-- Place test scripts in the `tests/{spec-name}/` directory at the project root.
+- Place test scripts in the `drc_stat_engine/tests/{spec-name}/` directory at the project root.
 - Keep test scripts — they are archived and used for regression testing.
 
-### Current test files for `dice-stats-report`
+### Current test files for `dice_stat_report`
 
 | File | What it tests |
 |------|---------------|
 | `test_dice_stats_report_t1_validation.py` | `DicePool`, `Operation` dataclasses, `validate_dice_pool`, `validate_operation_pipeline` |
 | `test_dice_stats_report_t2_pipeline.py` | `apply_operation`, `run_pipeline`, probability integrity property tests |
 | `test_dice_stats_report_t3_cumulative_proba.py` | `cumulative_damage`, `cumulative_accuracy`, `crit_probability` |
-| `test_dice_stats_report_t4_checkpoint.py` | Runs all of the above as a full regression suite |
+| `test_dice_stats_report_t4_checkpoint.py` | Full regression suite — runs t1, t2, t3 |
 | `test_dice_stats_report_t5_strategy.py` | `STRATEGY_PRIORITY_LISTS`, `build_strategy_pipeline`, `generate_report` |
+| `test_dice_stats_report_t6_format.py` | `format_report` — header, damage/accuracy table formatting, strategy labels |
 
 ## Running Test Scripts and Reading Output
 
@@ -38,12 +39,12 @@ The terminal environment does not reliably surface stdout. **Always redirect out
 
 Step 1 — run via `controlBashProcess`, redirecting output (run from project root):
 ```
-/home/elred/.virtualenvs/drc/bin/python tests/dice-stats-report/test_dice_stats_report_t2_pipeline.py > tests/dice-stats-report/out.txt 2>&1; echo "EXIT:$?" >> tests/dice-stats-report/out.txt
+/home/elred/.virtualenvs/drc/bin/python drc_stat_engine/tests/dice_stat_report/test_dice_stats_report_t2_pipeline.py > drc_stat_engine/tests/dice_stat_report/out.txt 2>&1; echo "EXIT:$?" >> drc_stat_engine/tests/dice_stat_report/out.txt
 ```
 
 Step 2 — read the result with `readFile`:
 ```
-tests/dice-stats-report/out.txt
+drc_stat_engine/tests/dice_stat_report/out.txt
 ```
 
 Step 3 — delete the output file after reading it (it's ephemeral; the test script itself is kept).
