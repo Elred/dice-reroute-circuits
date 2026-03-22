@@ -2,11 +2,11 @@
 
 ## Overview
 
-Build a `ReportGenerator` class in `stats/report.py` that accepts a dice pool, an operation pipeline, and optional strategies, then computes and prints cumulative probability distributions for damage, accuracy, and crits.
+Build a `ReportGenerator` class in `drc_stat_engine/stats/report.py` that accepts a dice pool, an operation pipeline, and optional strategies, then computes and prints cumulative probability distributions for damage, accuracy, and crits.
 
 ## Tasks
 
-- [x] 1. Create `stats/report.py` with core data structures and input validation
+- [x] 1. Create `drc_stat_engine/stats/report.py` with core data structures and input validation
   - Define `DicePool` dataclass (red, blue, black counts + type)
   - Define `Operation` dataclass (type, count, priority_list)
   - Implement `validate_dice_pool()` — reject empty pools, negative counts, invalid types
@@ -52,11 +52,12 @@ Build a `ReportGenerator` class in `stats/report.py` that accepts a dice pool, a
 
 - [x] 5. Implement strategy-based report variants
   - [x] 5.1 Define priority lists for each strategy per dice type
-    - `max_damage`: blanks first, then non-damage faces, then hits, then crits
-    - `max_accuracy`: blanks and hits before accuracy faces
-    - `max_crits`: blanks and hits before crit faces
+    - `max_damage`: blanks first (blue acc before red acc), then acc; hits/crits/doubles kept unconditionally
+    - `max_doubles`: blanks → acc → single hits → single crits; double-damage faces kept unconditionally
+    - `max_accuracy`: blanks → blue hits/crits → red hits/crits; acc and all black faces kept unconditionally
+    - `max_crits`: blanks → acc → single hits; crit faces and doubles kept unconditionally
     - Cover both `ship` and `squad` profiles
-    - _Requirements: 6.2, 6.3, 6.4_
+    - _Requirements: 6.2, 6.3, 6.4, 6.5_
 
   - [x] 5.2 Implement `build_strategy_pipeline(pipeline, strategy, type_str)` that substitutes priority lists into priority-dependent operations
     - Detect whether any operation in the pipeline is priority-dependent (`reroll`, `cancel`)
@@ -87,7 +88,7 @@ Build a `ReportGenerator` class in `stats/report.py` that accepts a dice pool, a
     - Instantiate a `DicePool`, define an `Operation_Pipeline`, call `generate_report`, print output
     - _Requirements: 7.1, 2.1, 3.1, 4.1, 5.1_
 
-  - [x] 7.2 Verify `report.py` runs standalone from the `stats/` directory (`python report.py`)
+  - [x] 7.2 Verify `report.py` runs standalone from the `drc_stat_engine/stats/` directory (`python report.py`)
     - Confirm imports from `profiles` and `dice` resolve correctly
     - _Requirements: 7.1_
 
@@ -97,6 +98,6 @@ Build a `ReportGenerator` class in `stats/report.py` that accepts a dice pool, a
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP
-- `report.py` imports from `profiles` and `dice` — run from `stats/` directory like existing scripts
+- `report.py` imports from `profiles` and `dice` — run from `drc_stat_engine/stats/` directory like existing scripts
 - Strategy priority lists must be defined per dice type (`ship` vs `squad`) since face values differ
-- Property tests can be written with `pytest` + `hypothesis` if added to `requirements.txt`
+- Test scripts live in `drc_stat_engine/tests/dice_stat_report/`

@@ -2,7 +2,7 @@
 
 ## Overview
 
-`stats/report.py` is a self-contained module that builds on the existing `dice.py` and `profiles.py` infrastructure to produce a formatted probability report for a given dice pool and operation pipeline. It introduces no new dependencies beyond what already exists in the project.
+`drc_stat_engine/stats/report.py` is a self-contained module that builds on the existing `dice.py` and `profiles.py` infrastructure to produce a formatted probability report for a given dice pool and operation pipeline. It introduces no new dependencies beyond what already exists in the project.
 
 ---
 
@@ -126,20 +126,22 @@ Both `reroll_dice` and `cancel_dice` return `(result_df, initial_df)` — `apply
 
 ### Strategy System
 
-**Strategy priority lists** are defined per dice type (`ship` / `squad`) since face value strings differ between the two. Each strategy list covers **all** faces for that type — it is the complete ordering used to resolve `priority_list` on any operation.
+**Strategy priority lists** are defined per dice type (`ship` / `squad`) since face value strings differ between the two. Each list contains only the faces that are candidates for reroll/cancel — faces not in the list are kept unconditionally.
 
-| Strategy       | Sacrifice order (lowest-value first)                                                   |
-|----------------|----------------------------------------------------------------------------------------|
-| `max_damage`   | blanks → acc → hits → crits → multi-damage (keep highest damage last)                 |
-| `max_accuracy` | blanks → hits → crits → multi-damage → acc (keep acc faces last)                      |
-| `max_crits`    | blanks → acc → hits → crits → multi-damage (keep crits and multi-damage last)         |
+| Strategy       | Faces kept unconditionally                          | Sacrifice order (lowest-value first)                        |
+|----------------|-----------------------------------------------------|-------------------------------------------------------------|
+| `max_damage`   | hits, crits, multi-damage                           | blanks → acc (blue before red)                              |
+| `max_doubles`  | multi-damage (`R_hit+hit`, `B_hit+crit`)            | blanks → acc → single hits → single crits                  |
+| `max_accuracy` | acc, all black faces                                | blanks → blue hits/crits → red hits/crits                  |
+| `max_crits`    | crits, multi-damage                                 | blanks → acc → single hits                                  |
 
-Ship face orderings:
-- `max_damage`: `["R_blank", "B_blank", "R_acc", "U_acc", "R_hit", "U_hit", "B_hit", "R_crit", "U_crit", "R_hit+hit", "B_hit+crit"]`
-- `max_accuracy`: `["R_blank", "B_blank", "R_hit", "U_hit", "B_hit", "R_crit", "U_crit", "R_hit+hit", "B_hit+crit", "R_acc", "U_acc"]`
-- `max_crits`: `["R_blank", "B_blank", "R_acc", "U_acc", "R_hit", "U_hit", "B_hit", "R_crit", "U_crit", "R_hit+hit", "B_hit+crit"]`
+Ship face orderings (faces listed = candidates for reroll/cancel; unlisted = kept):
+- `max_damage`:   `["R_blank", "B_blank", "U_acc", "R_acc"]`
+- `max_doubles`:  `["R_blank", "B_blank", "U_acc", "R_acc", "U_hit", "B_hit", "R_hit", "R_crit", "U_crit"]`
+- `max_accuracy`: `["R_blank", "U_hit", "U_crit", "R_hit", "R_crit"]`
+- `max_crits`:    `["R_blank", "B_blank", "U_acc", "R_acc", "U_hit", "B_hit", "R_hit"]`
 
-Squad differences: `R_crit` and `U_crit` are `damage=0, crit=0` for squad, so they are treated as near-blanks and appear early in all squad strategy lists.
+Squad differences: `R_crit` and `U_crit` are `damage=0, crit=0` for squad, so they are treated as near-blanks and appear early in all squad strategy lists. `B_hit+crit` has `damage=1, crit=0` for squad (no crit value).
 
 **`build_strategy_pipeline(pipeline: List[Operation], strategy: str, type_str: str) -> List[Operation]`**
 - Returns a copy of the pipeline with `priority_list` resolved on all `reroll`/`cancel` operations
@@ -151,43 +153,46 @@ Squad differences: `R_crit` and `U_crit` are `damage=0, crit=0` for squad, so th
 - Validates pool and pipeline
 - Builds initial `roll_df` via `combine_dice()`
 - Defaults to `["max_damage"]` if no strategies provided
+- Valid ship strategies: `max_damage`, `max_doubles`, `max_accuracy`, `max_crits`
+- Valid squad strategies: `max_damage`, `max_accuracy`, `max_crits`
 - Runs once per strategy: calls `build_strategy_pipeline`, then `run_pipeline`, then computes stats
-- Each variant dict: `{"label": str, "damage": [...], "accuracy": [...], "crit": float}`
+- Each variant dict: `{"label": str, "damage": [...], "accuracy": [...], "crit": float, "avg_damage": float, "priority_list": [...]}`
 
 ---
 
 ### Output Formatting
 
 **`format_report(dice_pool: DicePool, pipeline: List[Operation], variants: List[dict]) -> str`**
-
-Output structure:
 ```
 Dice Pool: 3R 0U 2B (ship)
 Pipeline:  reroll x1 [R_blank, B_blank] | cancel x2 [R_blank, B_blank, R_hit]
 
 === Strategy: max_damage ===
 
+Priority List: R_blank > B_blank > U_acc > R_acc
+
 Cumulative Damage:
-  >= 0:  100.0%
-  >= 1:   75.3%
+  >= 0:  100.00%
+  >= 1:   75.30%
   ...
 
 Cumulative Accuracy:
-  >= 0:  100.0%
-  >= 1:   18.8%
+  >= 0:  100.00%
+  >= 1:   18.80%
   ...
 
-Crit Probability: 43.8%
+Crit Probability: 43.80%
+Average Damage:   1.23
 
 ==============================
 
-=== Strategy: max_accuracy ===
+=== Strategy: max_doubles ===
 ...
 ```
 
-- Percentages rounded to 1 decimal place (req 7.3, 7.4, 7.5)
+- Percentages rounded to 2 decimal places (req 7.3, 7.4, 7.5)
 - Header shows pool composition and pipeline `applicable_results` (req 7.2, 7.7)
-- Every variant is labeled with its strategy name (req 6.6)
+- Every variant is labeled with its strategy name (req 6.7)
 - Multiple variants are separated by a divider line (req 7.6)
 
 ---
@@ -214,10 +219,10 @@ Crit Probability: 43.8%
 
 ## File Layout
 
-All code lives in `stats/report.py`. Run from the `stats/` directory:
+All code lives in `drc_stat_engine/stats/report.py`. Run from the `drc_stat_engine/stats/` directory:
 
 ```
-cd stats && python report.py
+cd drc_stat_engine/stats && python report.py
 ```
 
 Imports used:

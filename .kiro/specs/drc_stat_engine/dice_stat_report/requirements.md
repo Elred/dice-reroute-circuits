@@ -10,7 +10,7 @@ The dice stats report feature enables players to generate a comprehensive probab
 - **Operation**: A transformation applied to a roll DataFrame — e.g. reroll, cancel, add dice. Each operation defines an `applicable_results` whitelist and a resolved `priority_list`.
 - **Applicable_Results**: The user-defined whitelist of die face values an operation is allowed to target. Validated against the pool's color/type profile. Never modified by strategy resolution.
 - **Priority_List**: The resolved ordered list of face values passed to the underlying dice function at execution time. Derived by filtering the Strategy's full ordering to only faces present in `applicable_results`.
-- **Strategy**: A named optimization goal — one of `max_damage`, `max_accuracy`, or `max_crits` — that defines a full face ordering used to resolve `Priority_List` for priority-dependent operations. A strategy is always required; the default is `max_damage`.
+- **Strategy**: A named optimization goal — one of `max_damage`, `max_doubles`, `max_accuracy`, or `max_crits` — that defines a full face ordering used to resolve `Priority_List` for priority-dependent operations. A strategy is always required; the default is `max_damage`.
 - **Roll_DataFrame**: A pandas DataFrame with columns `value`, `proba`, `damage`, `crit`, `acc`, `blank` representing the full probability distribution of a roll state.
 - **Report**: The final output produced by the Report_Generator for a given Dice_Pool, operation sequence, and set of Strategies.
 - **Cumulative_Probability**: The probability of achieving at least X of a given outcome (damage, accuracy, or crits).
@@ -90,11 +90,12 @@ The dice stats report feature enables players to generate a comprehensive probab
 #### Acceptance Criteria
 
 1. THE Report_Generator SHALL always produce one Report variant per requested Strategy. A strategy is always required; the default is `max_damage`.
-2. WHEN computing the `max_damage` Strategy variant, THE Report_Generator SHALL use a Priority_List that prioritizes rerolling/cancelling blanks first, then accuracy faces, then hits, then crits, keeping multi-damage faces last.
-3. WHEN computing the `max_accuracy` Strategy variant, THE Report_Generator SHALL use a Priority_List that prioritizes rerolling/cancelling blanks and hits before accuracy faces.
-4. WHEN computing the `max_crits` Strategy variant, THE Report_Generator SHALL use a Priority_List that prioritizes rerolling/cancelling blanks, then accuracy faces, then hits, then crits, keeping multi-damage faces last.
-5. THE Report_Generator SHALL resolve the effective Priority_List for each priority-dependent Operation by filtering the Strategy's full face ordering to only the faces present in that Operation's `applicable_results`. The `applicable_results` field is never modified.
-6. THE Report_Generator SHALL label each Report variant clearly with its Strategy name in the output.
+2. WHEN computing the `max_damage` Strategy variant, THE Report_Generator SHALL use a Priority_List that prioritizes rerolling/cancelling blanks first, then accuracy faces (blue before red), keeping hits, crits, and multi-damage faces unconditionally.
+3. WHEN computing the `max_doubles` Strategy variant, THE Report_Generator SHALL use a Priority_List that prioritizes rerolling/cancelling blanks, then accuracy faces, then single hits, then single crits, keeping double-damage faces (`R_hit+hit`, `B_hit+crit`) unconditionally.
+4. WHEN computing the `max_accuracy` Strategy variant, THE Report_Generator SHALL use a Priority_List that prioritizes rerolling/cancelling blanks, then blue hits/crits, then red hits/crits, keeping accuracy faces and all black faces unconditionally.
+5. WHEN computing the `max_crits` Strategy variant, THE Report_Generator SHALL use a Priority_List that prioritizes rerolling/cancelling blanks, then accuracy faces, then single hits, keeping crit faces and multi-damage faces unconditionally.
+6. THE Report_Generator SHALL resolve the effective Priority_List for each priority-dependent Operation by filtering the Strategy's full face ordering to only the faces present in that Operation's `applicable_results`. The `applicable_results` field is never modified.
+7. THE Report_Generator SHALL label each Report variant clearly with its Strategy name in the output.
 
 ---
 
@@ -106,9 +107,9 @@ The dice stats report feature enables players to generate a comprehensive probab
 
 1. THE Report_Generator SHALL output the Report as formatted text to standard output.
 2. THE Report_Generator SHALL display the Dice_Pool composition (counts per color and type) in the Report header.
-3. THE Report_Generator SHALL display the cumulative damage probability table with one row per damage value, showing the damage threshold and its Cumulative_Probability as a percentage rounded to 1 decimal place.
-4. THE Report_Generator SHALL display the cumulative accuracy probability table with one row per accuracy value, showing the accuracy threshold and its Cumulative_Probability as a percentage rounded to 1 decimal place.
-5. THE Report_Generator SHALL display the crit probability as a single percentage value rounded to 1 decimal place.
+3. THE Report_Generator SHALL display the cumulative damage probability table with one row per damage value, showing the damage threshold and its Cumulative_Probability as a percentage rounded to 2 decimal places.
+4. THE Report_Generator SHALL display the cumulative accuracy probability table with one row per accuracy value, showing the accuracy threshold and its Cumulative_Probability as a percentage rounded to 2 decimal places.
+5. THE Report_Generator SHALL display the crit probability as a single percentage value rounded to 2 decimal places.
 6. WHERE Strategy variants are present, THE Report_Generator SHALL display each variant in a clearly separated section labeled with the Strategy name.
 7. THE Report_Generator SHALL display the applied Operation_Pipeline in the Report header so the user can verify the scenario.
 
