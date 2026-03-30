@@ -47,7 +47,7 @@ class TestValidation(unittest.TestCase):
         self.assertEqual(r.status_code, 422)
         self.assertIn("error", r.get_json())
 
-    def test_unknown_operation_type_returns_422(self):
+    def test_unknown_attack_effect_type_returns_422(self):
         """6.5 — unknown op type → 422."""
         r = post_report(self.client, {
             "dice_pool": {"red": 1, "blue": 0, "black": 0, "type": "ship"},

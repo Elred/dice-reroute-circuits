@@ -1,9 +1,12 @@
 import traceback
 from flask import Blueprint, request, jsonify
-from drc_stat_engine.stats.report import (
-    generate_report, validate_dice_pool, validate_operation_pipeline,
-    DicePool, Operation, STRATEGY_PRIORITY_LISTS, VALID_OPERATION_TYPES,
+from drc_stat_engine.stats.dice_models import (
+    DicePool, AttackEffect,
+    VALID_ATTACK_EFFECT_TYPES,
+    validate_dice_pool, validate_attack_effect_pipeline,
 )
+from drc_stat_engine.stats.strategies import STRATEGY_PRIORITY_LISTS
+from drc_stat_engine.stats.report_engine import generate_report
 from drc_stat_engine.stats.profiles import (
     red_die_ship, blue_die_ship, black_die_ship,
     red_die_squad, blue_die_squad, black_die_squad,
@@ -13,7 +16,7 @@ api_bp = Blueprint("api", __name__, url_prefix="/api/v1")
 
 
 def parse_report_request(data: dict):
-    """Parse JSON body into DicePool, List[Operation], and strategies list."""
+    """Parse JSON body into DicePool, List[AttackEffect], and strategies list."""
     try:
         dp = data["dice_pool"]
     except KeyError:
@@ -26,16 +29,32 @@ def parse_report_request(data: dict):
         type=dp.get("type", "ship"),
     )
 
+    # Resolve "any" count to pool size at each pipeline position.
+    # Pool size grows as add_dice ops are encountered.
+    running_size = pool.red + pool.blue + pool.black
     pipeline = []
     for op in data.get("pipeline", []):
-        pipeline.append(Operation(
+        raw_count = op.get("count", 1)
+        if op["type"] == "add_dice":
+            d = op.get("dice_to_add") or {}
+            running_size += d.get("red", 0) + d.get("blue", 0) + d.get("black", 0)
+            resolved_count = raw_count if raw_count != "any" else running_size
+        else:
+            resolved_count = running_size if raw_count == "any" else int(raw_count)
+        target_result = None
+        if op["type"] == "change_die":
+            target_result = op["target_result"]  # raises KeyError if missing → HTTP 400
+        pipeline.append(AttackEffect(
             type=op["type"],
-            count=op.get("count", 1),
+            count=resolved_count,
             applicable_results=op.get("applicable_results", []),
             dice_to_add=op.get("dice_to_add"),
+            target_result=target_result,
         ))
 
     strategies = data.get("strategies", ["max_damage"])
+    if len(strategies) != 1:
+        raise ValueError("Exactly one strategy must be provided.")
     return pool, pipeline, strategies
 
 
@@ -52,14 +71,19 @@ def report():
         pool, pipeline, strategies = parse_report_request(data)
     except KeyError as e:
         return jsonify({"error": f"Missing field: {e}"}), 400
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 422
+
+    precision = request.args.get("precision", "normal")
+    sample_count = 100_000 if precision == "high" else 10_000
 
     try:
         # REQ-3.2 / REQ-3.3: validation errors → 422
         validate_dice_pool(pool)
-        validate_operation_pipeline(pipeline, pool)
+        validate_attack_effect_pipeline(pipeline, pool)
 
         # REQ-3.4: unknown strategy → 422 (raised inside generate_report)
-        variants = generate_report(pool, pipeline, strategies)
+        variants = generate_report(pool, pipeline, strategies, sample_count=sample_count)
     except ValueError as e:
         return jsonify({"error": str(e)}), 422
     except Exception:
@@ -72,7 +96,7 @@ def report():
 @api_bp.route("/meta", methods=["GET"])
 def meta():
     """REQ-2.1 / REQ-2.2 / REQ-2.3: derive all metadata from live imports."""
-    face_values = {
+    result_values = {
         "ship": {
             "red":   [f["value"] for f in red_die_ship],
             "blue":  [f["value"] for f in blue_die_ship],
@@ -87,6 +111,17 @@ def meta():
     return jsonify({
         "dice_types": ["ship", "squad"],
         "strategies": {k: list(v.keys()) for k, v in STRATEGY_PRIORITY_LISTS.items()},
-        "operation_types": sorted(VALID_OPERATION_TYPES),
-        "face_values": face_values,
+        "attack_effect_types": sorted(VALID_ATTACK_EFFECT_TYPES),
+        "result_values": result_values,
+        "strategy_priority_lists": {
+            type_str: {
+                strategy: {
+                    "reroll": lists["reroll"],
+                    "cancel": lists.get("cancel", []),
+                    "change_die": lists["change_die"],
+                }
+                for strategy, lists in strategies.items()
+            }
+            for type_str, strategies in STRATEGY_PRIORITY_LISTS.items()
+        },
     }), 200

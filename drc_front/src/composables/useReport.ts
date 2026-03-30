@@ -1,17 +1,18 @@
 import { useConfigStore } from '../stores/configStore'
 import { useReportStore } from '../stores/reportStore'
-import type { ReportRequest } from '../types/api'
+import type { ReportRequest, AttackEffect } from '../types/api'
 
 export function useReport() {
   const config = useConfigStore()
   const report = useReportStore()
 
   function buildRequest(): ReportRequest {
-    return {
-      dice_pool: { ...config.pool },
+    return JSON.parse(JSON.stringify({
+      dice_pool: config.pool,
       pipeline: config.pipeline,
       strategies: config.strategies,
-    }
+      precision: config.precision,
+    }))
   }
 
   function calculate() {

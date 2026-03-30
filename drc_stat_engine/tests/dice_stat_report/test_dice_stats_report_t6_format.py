@@ -6,15 +6,16 @@ Requirements: 7.2, 7.3, 7.6
 import sys
 import os
 import unittest
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'stats'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
 
-from report import DicePool, Operation, format_report
+from drc_stat_engine.stats.dice_models import DicePool, AttackEffect
+from drc_stat_engine.stats.report_engine import format_report
 
 POOL_3R2B = DicePool(red=3, blue=0, black=2, type="ship")
 
 PIPELINE_REROLL = [
-    Operation(type="reroll", count=1, applicable_results=["R_blank", "B_blank"]),
-    Operation(type="cancel", count=2, applicable_results=["R_blank", "B_blank", "R_hit"]),
+    AttackEffect(type="reroll", count=1, applicable_results=["R_blank", "B_blank"]),
+    AttackEffect(type="cancel", count=2, applicable_results=["R_blank", "B_blank", "R_hit"]),
 ]
 
 SINGLE_VARIANT = [

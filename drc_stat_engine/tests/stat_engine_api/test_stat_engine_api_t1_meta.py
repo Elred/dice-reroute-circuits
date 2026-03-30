@@ -22,7 +22,7 @@ class TestMetaEndpoint(unittest.TestCase):
     def test_contains_required_keys(self):
         r = self.client.get("/api/v1/meta")
         data = r.get_json()
-        for key in ("dice_types", "strategies", "operation_types", "face_values"):
+        for key in ("dice_types", "strategies", "attack_effect_types", "result_values"):
             self.assertIn(key, data, f"Missing key: {key}")
 
     def test_dice_types(self):
@@ -34,13 +34,13 @@ class TestMetaEndpoint(unittest.TestCase):
         self.assertIn("ship", data["strategies"])
         self.assertIn("squad", data["strategies"])
 
-    def test_operation_types(self):
+    def test_attack_effect_types(self):
         data = self.client.get("/api/v1/meta").get_json()
-        self.assertEqual(sorted(data["operation_types"]), ["add_dice", "cancel", "reroll"])
+        self.assertEqual(sorted(data["attack_effect_types"]), ["add_dice", "cancel", "reroll"])
 
-    def test_face_values_structure(self):
+    def test_result_values_structure(self):
         data = self.client.get("/api/v1/meta").get_json()
-        fv = data["face_values"]
+        fv = data["result_values"]
         for dice_type in ("ship", "squad"):
             self.assertIn(dice_type, fv)
             for color in ("red", "blue", "black"):
@@ -48,10 +48,10 @@ class TestMetaEndpoint(unittest.TestCase):
                 self.assertIsInstance(fv[dice_type][color], list)
                 self.assertGreater(len(fv[dice_type][color]), 0)
 
-    def test_face_values_match_profiles(self):
-        """REQ-2.3: face_values must be derived from actual profiles."""
+    def test_result_values_match_profiles(self):
+        """REQ-2.3: result_values must be derived from actual profiles."""
         data = self.client.get("/api/v1/meta").get_json()
-        fv = data["face_values"]
+        fv = data["result_values"]
         self.assertEqual(fv["ship"]["red"],   [f["value"] for f in red_die_ship])
         self.assertEqual(fv["ship"]["blue"],  [f["value"] for f in blue_die_ship])
         self.assertEqual(fv["ship"]["black"], [f["value"] for f in black_die_ship])

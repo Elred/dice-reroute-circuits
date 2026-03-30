@@ -11,10 +11,10 @@ import sys
 import os
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'stats'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
 
-from dice import combine_dice
-from report import cumulative_damage, cumulative_accuracy, crit_probability
+from drc_stat_engine.stats.dice_maths_combinatories import combine_dice
+from drc_stat_engine.stats.report_engine import cumulative_damage, cumulative_accuracy, crit_probability
 
 TOL = 1e-9
 

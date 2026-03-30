@@ -1,0 +1,9 @@
+priority_list after build: ['R_hit', 'R_crit', 'R_hit+hit', 'U_hit', 'U_crit']
+Cumulative accuracy:
+  P(acc >= 0) = 100.00%
+  P(acc >= 1) = 100.00%
+  P(acc >= 2) = 41.02%
+  P(acc >= 3) = 5.47%
+
+PASS: P(acc >= 1) = 100.00% (correctly non-zero)
+EXIT:0

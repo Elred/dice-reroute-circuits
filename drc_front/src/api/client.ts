@@ -9,6 +9,8 @@ export async function fetchMeta(): Promise<MetaResponse> {
 }
 
 export async function fetchReport(payload: ReportRequest): Promise<ReportResponse> {
-  const res = await http.post<ReportResponse>('/report', payload)
+  const { precision, ...body } = payload
+  const params = precision && precision !== 'normal' ? { precision } : {}
+  const res = await http.post<ReportResponse>('/report', body, { params })
   return res.data
 }

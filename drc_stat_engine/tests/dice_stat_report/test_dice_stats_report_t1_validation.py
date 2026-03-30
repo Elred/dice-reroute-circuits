@@ -1,6 +1,6 @@
 """
 Tests for Task 1 — core data structures and input validation in report.py.
-Covers: DicePool, Operation, validate_dice_pool, validate_operation_pipeline
+Covers: DicePool, AttackEffect, validate_dice_pool, validate_attack_effect_pipeline
 
 Requirements: 1.1, 1.2, 1.3, 1.4, 2.3, 2.5
 
@@ -11,9 +11,9 @@ import sys
 import os
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'stats'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
 
-from report import DicePool, Operation, validate_dice_pool, validate_operation_pipeline
+from drc_stat_engine.stats.dice_models import DicePool, AttackEffect, validate_dice_pool, validate_attack_effect_pipeline
 
 
 # ---------------------------------------------------------------------------
@@ -38,27 +38,27 @@ class TestDicePool(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Operation dataclass
+# AttackEffect dataclass
 # ---------------------------------------------------------------------------
 
-class TestOperation(unittest.TestCase):
+class TestAttackEffect(unittest.TestCase):
 
     def test_defaults(self):
-        op = Operation(type="reroll")
+        op = AttackEffect(type="reroll")
         self.assertEqual(op.count, 1)
         self.assertEqual(op.applicable_results, [])
         self.assertEqual(op.priority_list, [])
 
     def test_stores_fields(self):
-        op = Operation(type="cancel", count=3, applicable_results=["R_blank", "B_blank"])
+        op = AttackEffect(type="cancel", count=3, applicable_results=["R_blank", "B_blank"])
         self.assertEqual(op.type, "cancel")
         self.assertEqual(op.count, 3)
         self.assertEqual(op.applicable_results, ["R_blank", "B_blank"])
 
     def test_applicable_results_not_shared(self):
         # Mutable default must not be shared between instances
-        op1 = Operation(type="reroll")
-        op2 = Operation(type="cancel")
+        op1 = AttackEffect(type="reroll")
+        op2 = AttackEffect(type="cancel")
         op1.applicable_results.append("R_blank")
         self.assertEqual(op2.applicable_results, [], "applicable_results default is shared — use field(default_factory=list)")
 
@@ -141,7 +141,7 @@ class TestValidateDicePoolType(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# validate_operation_pipeline — Requirement 2.5: unknown op types rejected
+# validate_attack_effect_pipeline — Requirement 2.5: unknown op types rejected
 # ---------------------------------------------------------------------------
 
 class TestValidatePipelineOpTypes(unittest.TestCase):
@@ -149,24 +149,24 @@ class TestValidatePipelineOpTypes(unittest.TestCase):
     def test_unknown_op_raises(self):
         pool = DicePool(red=2, blue=0, black=0, type="ship")
         with self.assertRaises(ValueError) as ctx:
-            validate_operation_pipeline([Operation(type="explode")], pool)
+            validate_attack_effect_pipeline([AttackEffect(type="explode")], pool)
         self.assertIn("explode", str(ctx.exception))
 
     def test_all_known_op_types_accepted(self):
         pool = DicePool(red=1, blue=1, black=1, type="ship")
-        validate_operation_pipeline([
-            Operation(type="reroll", count=1, applicable_results=["R_blank"]),
-            Operation(type="cancel", count=1, applicable_results=["B_blank"]),
-            Operation(type="add_dice", applicable_results=["U_hit"]),
+        validate_attack_effect_pipeline([
+            AttackEffect(type="reroll", count=1, applicable_results=["R_blank"]),
+            AttackEffect(type="cancel", count=1, applicable_results=["B_blank"]),
+            AttackEffect(type="add_dice", applicable_results=["U_hit"]),
         ], pool)
 
     def test_empty_pipeline_accepted(self):
         pool = DicePool(red=2, blue=1, black=0, type="squad")
-        validate_operation_pipeline([], pool)
+        validate_attack_effect_pipeline([], pool)
 
 
 # ---------------------------------------------------------------------------
-# validate_operation_pipeline — Requirement 2.3: applicable_results not validated against pool
+# validate_attack_effect_pipeline — Requirement 2.3: applicable_results not validated against pool
 # ---------------------------------------------------------------------------
 
 class TestValidatePipelineFaces(unittest.TestCase):
@@ -174,40 +174,40 @@ class TestValidatePipelineFaces(unittest.TestCase):
     def test_face_not_in_pool_reroll_is_accepted(self):
         # applicable_results outside the pool is valid — it's a no-op at runtime
         pool = DicePool(red=2, blue=0, black=0, type="ship")
-        validate_operation_pipeline(
-            [Operation(type="reroll", count=1, applicable_results=["U_acc"])], pool
+        validate_attack_effect_pipeline(
+            [AttackEffect(type="reroll", count=1, applicable_results=["U_acc"])], pool
         )
 
     def test_face_not_in_pool_cancel_is_accepted(self):
         pool = DicePool(red=0, blue=0, black=1, type="ship")
-        validate_operation_pipeline(
-            [Operation(type="cancel", count=1, applicable_results=["R_blank"])], pool
+        validate_attack_effect_pipeline(
+            [AttackEffect(type="cancel", count=1, applicable_results=["R_blank"])], pool
         )
 
     def test_valid_faces_accepted(self):
         pool = DicePool(red=1, blue=0, black=1, type="ship")
-        validate_operation_pipeline(
-            [Operation(type="reroll", count=1, applicable_results=["R_blank", "B_blank"])], pool
+        validate_attack_effect_pipeline(
+            [AttackEffect(type="reroll", count=1, applicable_results=["R_blank", "B_blank"])], pool
         )
 
     def test_made_up_face_accepted(self):
         # No face validation — made-up faces are silently ignored at runtime
         pool = DicePool(red=1, blue=0, black=0, type="ship")
-        validate_operation_pipeline(
-            [Operation(type="cancel", count=1, applicable_results=["X_invalid"])], pool
+        validate_attack_effect_pipeline(
+            [AttackEffect(type="cancel", count=1, applicable_results=["X_invalid"])], pool
         )
 
     def test_add_dice_not_validated_against_pool(self):
         pool = DicePool(red=1, blue=0, black=0, type="ship")
-        validate_operation_pipeline(
-            [Operation(type="add_dice", applicable_results=["U_hit"])], pool
+        validate_attack_effect_pipeline(
+            [AttackEffect(type="add_dice", applicable_results=["U_hit"])], pool
         )
 
     def test_second_op_out_of_pool_accepted(self):
         pool = DicePool(red=1, blue=0, black=0, type="ship")
-        validate_operation_pipeline([
-            Operation(type="reroll", count=1, applicable_results=["R_blank"]),
-            Operation(type="reroll", count=1, applicable_results=["U_acc"]),
+        validate_attack_effect_pipeline([
+            AttackEffect(type="reroll", count=1, applicable_results=["R_blank"]),
+            AttackEffect(type="reroll", count=1, applicable_results=["U_acc"]),
         ], pool)
 
 

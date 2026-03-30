@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useMetaStore } from './stores/metaStore'
 import { useConfigStore } from './stores/configStore'
 import { useReport } from './composables/useReport'
 import DicePoolConfig from './components/DicePoolConfig.vue'
-import OperationPipeline from './components/OperationPipeline.vue'
+import AttackEffectPipeline from './components/AttackEffectPipeline.vue'
 import StrategySelector from './components/StrategySelector.vue'
 import ResultsPanel from './components/ResultsPanel.vue'
+import AboutModal from './components/AboutModal.vue'
+
+const showAbout = ref(false)
 
 const meta = useMetaStore()
 const config = useConfigStore()
@@ -23,7 +26,11 @@ const canCalculate = () => !config.isPoolEmpty && config.strategies.length > 0
     <!-- Header -->
     <header class="bg-[#1a1d2e] border-b border-[#d69e2e]/20 px-6 py-3 flex items-center gap-3">
       <span class="text-[#d69e2e] text-lg font-bold tracking-wide">DRC</span>
-      <span class="text-[#8892a4] text-sm">Dice Probability Calculator</span>
+      <span class="text-[#8892a4] text-sm">Dice Reroute Circuits</span>
+      <button
+        class="ml-auto text-[#d69e2e] text-sm hover:text-[#b7791f] transition-colors"
+        @click="showAbout = true"
+      >About</button>
     </header>
 
     <!-- Connection error banner -->
@@ -38,7 +45,7 @@ const canCalculate = () => !config.isPoolEmpty && config.strategies.length > 0
       <!-- Left panel: config -->
       <aside class="w-full md:w-80 lg:w-96 flex-shrink-0 space-y-3 overflow-y-auto">
         <DicePoolConfig />
-        <OperationPipeline />
+        <AttackEffectPipeline />
         <StrategySelector />
 
         <button
@@ -56,5 +63,7 @@ const canCalculate = () => !config.isPoolEmpty && config.strategies.length > 0
       </section>
 
     </main>
+
+    <AboutModal v-model="showAbout" />
   </div>
 </template>

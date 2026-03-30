@@ -11,10 +11,12 @@ from hypothesis import given, settings, assume, HealthCheck
 from hypothesis import strategies as st
 
 from drc_stat_engine.api.app import create_app
-from drc_stat_engine.stats.report import (
-    generate_report, validate_dice_pool, validate_operation_pipeline,
-    DicePool, Operation, STRATEGY_PRIORITY_LISTS, VALID_OPERATION_TYPES,
+from drc_stat_engine.stats.dice_models import (
+    DicePool, AttackEffect, VALID_ATTACK_EFFECT_TYPES,
+    validate_dice_pool, validate_attack_effect_pipeline,
 )
+from drc_stat_engine.stats.strategies import STRATEGY_PRIORITY_LISTS
+from drc_stat_engine.stats.report_engine import generate_report
 from drc_stat_engine.stats.profiles import (
     red_die_ship, blue_die_ship, black_die_ship,
     red_die_squad, blue_die_squad, black_die_squad,
@@ -29,7 +31,7 @@ ALL_STRATEGIES = {
     "ship": list(STRATEGY_PRIORITY_LISTS["ship"].keys()),
     "squad": list(STRATEGY_PRIORITY_LISTS["squad"].keys()),
 }
-ALL_FACE_VALUES = {
+ALL_RESULT_VALUES = {
     "ship": (
         [f["value"] for f in red_die_ship]
         + [f["value"] for f in blue_die_ship]
@@ -58,15 +60,15 @@ def valid_dice_pool_st(draw):
 
 
 @st.composite
-def valid_operation_st(draw, dtype):
-    op_type = draw(st.sampled_from(sorted(VALID_OPERATION_TYPES)))
+def valid_attack_effect_st(draw, dtype):
+    op_type = draw(st.sampled_from(sorted(VALID_ATTACK_EFFECT_TYPES)))
     if op_type == "add_dice":
         r = draw(st.integers(min_value=0, max_value=1))
         u = draw(st.integers(min_value=0, max_value=1))
         b = draw(st.integers(min_value=0, max_value=1))
         return {"type": "add_dice", "dice_to_add": {"red": r, "blue": u, "black": b}}
     else:
-        faces = ALL_FACE_VALUES[dtype]
+        faces = ALL_RESULT_VALUES[dtype]
         count = draw(st.integers(min_value=1, max_value=2))
         applicable = draw(st.lists(st.sampled_from(faces), min_size=1, max_size=4, unique=True))
         return {"type": op_type, "count": count, "applicable_results": applicable}
@@ -76,7 +78,7 @@ def valid_operation_st(draw, dtype):
 def valid_request_st(draw):
     pool_dict = draw(valid_dice_pool_st())
     dtype = pool_dict["type"]
-    pipeline = draw(st.lists(valid_operation_st(dtype), min_size=0, max_size=2))
+    pipeline = draw(st.lists(valid_attack_effect_st(dtype), min_size=0, max_size=2))
     strategies = draw(st.lists(
         st.sampled_from(ALL_STRATEGIES[dtype]),
         min_size=1, max_size=2, unique=True,
@@ -114,7 +116,7 @@ class TestProperties(unittest.TestCase):
         pool = DicePool(red=dp["red"], blue=dp["blue"], black=dp["black"], type=dp["type"])
         pipeline = []
         for op in req.get("pipeline", []):
-            pipeline.append(Operation(
+            pipeline.append(AttackEffect(
                 type=op["type"],
                 count=op.get("count", 1),
                 applicable_results=op.get("applicable_results", []),
@@ -215,7 +217,7 @@ class TestProp5ValidationMirror(unittest.TestCase):
         })
         self.assertIn(r.status_code, (400, 422))
 
-    @given(st.text(min_size=1).filter(lambda s: s not in VALID_OPERATION_TYPES))
+    @given(st.text(min_size=1).filter(lambda s: s not in VALID_ATTACK_EFFECT_TYPES))
     @settings(max_examples=20)
     def test_invalid_op_type_always_422(self, op):
         r = post_report(self.client, {
