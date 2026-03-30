@@ -119,8 +119,8 @@ const allCards = computed(() =>
 function damageChartData(variant: VariantResult) {
   const entries: [string, number][] = variant.damage.map(([t, p], i) =>
     i === 0
-      ? ['=0', +(variant.damage_zero * 100).toFixed(1)]
-      : [`≥${t}`, +(p * 100).toFixed(1)]
+      ? ['=0', variant.damage_zero * 100]
+      : [`≥${t}`, p * 100]
   )
   const colors = entries.map((_, i) => i === 0 ? '#e53e3e' : '#d69e2e')
   const borders = entries.map((_, i) => i === 0 ? '#c53030' : '#b7791f')
@@ -139,8 +139,8 @@ function damageChartData(variant: VariantResult) {
 function accuracyChartData(variant: VariantResult) {
   const entries: [string, number][] = variant.accuracy.map(([t, p], i) =>
     i === 0
-      ? ['=0', +(variant.acc_zero * 100).toFixed(1)]
-      : [`≥${t}`, +(p * 100).toFixed(1)]
+      ? ['=0', variant.acc_zero * 100]
+      : [`≥${t}`, p * 100]
   )
   const colors = entries.map((_, i) => i === 0 ? '#e53e3e' : '#4299e1')
   const borders = entries.map((_, i) => i === 0 ? '#c53030' : '#2b6cb0')
@@ -156,6 +156,18 @@ function accuracyChartData(variant: VariantResult) {
   }
 }
 
+function formatPct(v: number): string {
+  if (v === 0) return '0%'
+  const absV = Math.abs(v)
+  if (absV < 0.01) {
+    // tiny value — use toFixed with enough decimals to avoid scientific notation
+    const decimals = Math.ceil(-Math.log10(absV)) + 4
+    return `${v.toFixed(decimals).replace(/\.?0+$/, '')}%`
+  }
+  // normal value — full JS float precision, no toFixed rounding
+  return `${v}%`
+}
+
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -168,7 +180,7 @@ const chartOptions = {
     legend: { display: false },
     tooltip: {
       callbacks: {
-        label: (ctx: any) => `${ctx.parsed.y.toFixed(1)}%`,
+        label: (ctx: any) => formatPct(ctx.parsed.y),
       },
     },
   },
@@ -221,11 +233,11 @@ const chartOptions = {
             </div>
             <div>
               <span class="text-[#8892a4] text-xs">Avg Damage</span>
-              <p class="text-[#f0f0f0] font-mono font-semibold">{{ card.variant.avg_damage.toFixed(2) }}</p>
+              <p class="text-[#f0f0f0] font-mono font-semibold">{{ card.variant.avg_damage.toFixed(3) }}</p>
             </div>
             <div>
               <span class="text-[#8892a4] text-xs">Crit %</span>
-              <p class="text-[#f0f0f0] font-mono font-semibold">{{ (card.variant.crit * 100).toFixed(1) }}%</p>
+              <p class="text-[#f0f0f0] font-mono font-semibold">{{ (card.variant.crit * 100).toFixed(3) }}%</p>
             </div>
           </div>
 
