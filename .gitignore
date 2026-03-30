@@ -133,6 +133,9 @@ node_modules/
 drc_front/dist/
 drc_front/.vite
 
+# Dice pool parquet cache (pre-generated, not committed)
+drc_stat_engine/cache/
+
 # Editor / IDE
 .vscode/
 .kiro/

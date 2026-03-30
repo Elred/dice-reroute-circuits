@@ -9,7 +9,7 @@ import unittest
 import importlib.util
 
 _HERE = os.path.dirname(__file__)
-sys.path.insert(0, os.path.join(_HERE, '..', '..', 'stats'))
+sys.path.insert(0, os.path.join(_HERE, '..', '..', '..', '..'))
 
 
 def _load(filename):

@@ -57,7 +57,8 @@ const diceRows = [
         <span class="w-6 text-center text-[#f0f0f0] font-mono">{{ config.pool[row.key] }}</span>
         <button
           @click="config.pool[row.key]++"
-          class="w-7 h-7 rounded bg-[#252840] text-[#f0f0f0] hover:bg-[#d69e2e] hover:text-[#0f1117] transition-colors text-lg leading-none"
+          :disabled="config.totalDiceCount >= 20"
+          class="w-7 h-7 rounded bg-[#252840] text-[#f0f0f0] hover:bg-[#d69e2e] hover:text-[#0f1117] transition-colors text-lg leading-none disabled:opacity-30 disabled:cursor-not-allowed"
         >+</button>
       </div>
     </div>
@@ -65,5 +66,6 @@ const diceRows = [
     <!-- Pool summary -->
     <p class="text-[#8892a4] text-xs font-mono">{{ poolSummary }}</p>
     <p v-if="config.isPoolEmpty" class="text-[#e53e3e] text-xs">Add at least one die to calculate.</p>
+    <p v-else-if="config.totalDiceCount >= 20" class="text-[#e53e3e] text-xs">Maximum of 20 dice reached.</p>
   </div>
 </template>

@@ -66,7 +66,8 @@ class TestReportBasic(unittest.TestCase):
 
     def test_empty_pipeline_matches_direct_call(self):
         """5.4 — empty pipeline returns same result as generate_report(pool, [], strategies)."""
-        from drc_stat_engine.stats.report import generate_report, DicePool
+        from drc_stat_engine.stats.report_engine import generate_report
+        from drc_stat_engine.stats.dice_models import DicePool
         pool = DicePool(red=2, blue=1, black=0, type="ship")
         expected = generate_report(pool, [], ["max_damage"])
 

@@ -1,14 +1,26 @@
 <script setup lang="ts">
-import type { Operation } from '../types/api'
+import type { AttackEffect } from '../types/api'
+import { useMetaStore } from '../stores/metaStore'
+import { useConfigStore } from '../stores/configStore'
 
-const props = defineProps<{ op: Operation; index: number; total: number }>()
+const props = defineProps<{ op: AttackEffect; index: number; total: number }>()
 const emit = defineEmits<{
   remove: [index: number]
   moveUp: [index: number]
   moveDown: [index: number]
 }>()
 
-function opSummary(op: Operation): string {
+const meta = useMetaStore()
+const config = useConfigStore()
+
+function humanReadableResult(f: string): string {
+  const colorMap: Record<string, string> = { R: 'Red', U: 'Blue', B: 'Black' }
+  const match = f.match(/^([A-Z])_(.+)$/)
+  if (match) return `${colorMap[match[1]] ?? match[1]} ${match[2]}`
+  return f
+}
+
+function opSummary(op: AttackEffect): string {
   if (op.type === 'add_dice') {
     const d = op.dice_to_add
     if (!d) return 'Add Dice'
@@ -18,9 +30,20 @@ function opSummary(op: Operation): string {
     if (d.black) parts.push(`${d.black}B`)
     return `Add Dice: ${parts.join(' ')}`
   }
+  if (op.type === 'change_die') {
+    const sourcesDesc = (op.applicable_results ?? []).length > 0
+      ? meta.describeResults(op.applicable_results!, config.pool.type)
+      : 'any'
+    const targetDesc = op.target_result ? humanReadableResult(op.target_result) : '?'
+    return `Change Die [${sourcesDesc} > ${targetDesc}]`
+  }
   const label = op.type === 'reroll' ? 'Reroll' : 'Cancel'
-  const faces = op.applicable_results?.join(', ') ?? 'any'
-  return `${label} ${op.count ?? 1}× [${faces}]`
+  const countStr = op.count === 'any' ? 'any' : `${op.count ?? 1}×`
+  const results = op.applicable_results ?? []
+  const resultsDesc = results.length > 0
+    ? meta.describeResults(results, config.pool.type)
+    : 'any'
+  return `${label} ${countStr} [${resultsDesc}]`
 }
 </script>
 
