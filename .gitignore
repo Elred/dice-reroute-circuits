@@ -127,3 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Node
+node_modules/
+drc_front/dist/
+drc_front/.vite
+
+# Editor / IDE
+.vscode/
+.kiro/

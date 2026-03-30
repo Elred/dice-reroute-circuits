@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-primary: #0f1117;
+  --color-bg-panel: #1a1d2e;
+  --color-bg-card: #252840;
+  --color-accent-gold: #d69e2e;
+  --color-text-primary: #f0f0f0;
+  --color-text-muted: #8892a4;
+  --color-dice-red: #e53e3e;
+  --color-dice-blue: #4299e1;
+  --color-dice-black: #718096;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #0f1117;
+  color: #f0f0f0;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #1a1d2e; }
+::-webkit-scrollbar-thumb { background: #d69e2e; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #b7791f; }
+
+/* Focus rings */
+:focus-visible {
+  outline: 2px solid #d69e2e;
+  outline-offset: 2px;
+}
+
+/* Button base states */
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
