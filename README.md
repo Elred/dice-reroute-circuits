@@ -6,12 +6,12 @@ A probability analysis tool for Star Wars Armada. It computes statistics for att
 
 ## How the stats engine works
 
-### Dice and faces
+### Dice and results
 
-Each die has a color (Red, Blue, Black) and a type (ship or squad). Rolling a die produces one of several possible faces, each with a fixed probability:
+Each die has a color (Red, Blue, Black) and a type (ship or squad). Rolling a die produces one of several possible results, each with a fixed probability:
 
 **Red ship die**
-| Face      | Probability | Damage | Crit | Acc |
+| result      | Probability | Damage | Crit | Acc |
 |-----------|-------------|--------|------|-----|
 | Blank     | 25%         | 0      | —    | —   |
 | Hit       | 25%         | 1      | —    | —   |
@@ -20,20 +20,20 @@ Each die has a color (Red, Blue, Black) and a type (ship or squad). Rolling a di
 | Hit+Hit   | 12.5%       | 2      | —    | —   |
 
 **Blue ship die**
-| Face      | Probability | Damage | Crit | Acc |
+| result      | Probability | Damage | Crit | Acc |
 |-----------|-------------|--------|------|-----|
 | Hit       | 50%         | 1      | —    | —   |
 | Crit      | 25%         | 1      | ✓    | —   |
 | Accuracy  | 25%         | 0      | —    | ✓   |
 
 **Black ship die**
-| Face      | Probability | Damage | Crit | Acc |
+| result      | Probability | Damage | Crit | Acc |
 |-----------|-------------|--------|------|-----|
 | Blank     | 25%         | 0      | —    | —   |
 | Hit       | 50%         | 1      | —    | —   |
 | Hit+Crit  | 25%         | 2      | ✓    | —   |
 
-Squad dice use the same colors but different face values (crits are worthless for squads, for example).
+Squad dice use the same colors but different result values (crits are worthless for squads, for example).
 
 ---
 
@@ -41,7 +41,7 @@ Squad dice use the same colors but different face values (crits are worthless fo
 
 When you roll multiple dice, the engine needs to know the probability of every possible combined outcome — e.g. "what's the chance of rolling exactly 3 damage from 2 red + 1 black?"
 
-The **combinatorial engine** answers this by computing the exact joint distribution. It takes every possible face from die A and pairs it with every possible face from die B, multiplying their probabilities. For 2 dice with 5 faces each, that's 25 combinations. For 3 dice it's 125. For 10 dice it's in the millions — and many of those rows are duplicates that need to be collapsed.
+The **combinatorial engine** answers this by computing the exact joint distribution. It takes every possible result from die A and pairs it with every possible result from die B, multiplying their probabilities. For 2 dice with 5 results each, that's 25 combinations. For 3 dice it's 125. For 10 dice it's in the millions — and many of those rows are duplicates that need to be collapsed.
 
 This is precise but hits a wall around 10+ dice: the intermediate tables grow exponentially and the computation becomes too slow.
 
@@ -74,10 +74,10 @@ You can also force a specific backend explicitly if needed.
 
 A roll doesn't happen in isolation. Upgrades and abilities modify the dice after the initial roll. The engine models this as an ordered **pipeline** of operations applied to the distribution:
 
-- **reroll** — pick up to N dice showing specific faces and re-roll them (e.g. reroll up to 2 blanks)
-- **cancel** — remove up to N dice showing specific faces from the pool (e.g. an opponent cancels your accuracy)
-- **add_dice** — add fresh dice of a given color to the pool (e.g. Gunnery Team adds a die)
-- **change_die** — force one die to show a specific face (e.g. a concentrate fire command)
+- **reroll** — pick up to N dice showing specific results and re-roll them (e.g. reroll up to 2 blanks)
+- **cancel** — remove up to N dice showing specific results from the pool (e.g. an opponent cancels your hit+hit)
+- **add_dice** — add fresh dice of a given color to the pool (e.g. Concentrate Fire adds a die)
+- **change_die** — force one die to show a specific result (e.g. Intensify Firepower! Fleet command)
 
 Each operation takes the current probability distribution and returns a new one. The pipeline runs them in sequence.
 
@@ -85,16 +85,14 @@ Each operation takes the current probability distribution and returns a new one.
 
 ### Strategies
 
-When you have a reroll or cancel operation, you need to decide *which* dice to target. A **strategy** defines the priority order — which faces to reroll first, which to cancel first — based on your goal:
+When you have a reroll or cancel operation, you need to decide *which* dice to target. A **strategy** defines the priority order — which results to reroll first, which to cancel first — based on your goal:
 
-- **max_damage** — reroll blanks and accuracy tokens, keep all damage faces
-- **max_accuracy** — reroll blanks and non-blue damage faces, keep accuracy tokens
-- **max_crits** — reroll blanks, accuracy tokens, and plain hits; keep crits
-- **max_doubles** — reroll everything below double-damage faces (hit+hit, hit+crit)
-- **balanced** — reroll blanks only, keep everything else
+- **max_damage** — reroll blanks and accuracy tokens; keep all damage results. For squads, also rerolls crits (which deal no damage for squads).
+- **balanced** — reroll blanks only; keep accuracy tokens and all damage results.
+- **max_accuracy_blue** — reroll blanks and blue hits/crits to fish for accuracy tokens on blue dice.
+- **black_doubles** *(ship only)* — reroll blanks and black hits to maximize double-damage results (hit+crit).
 
 The engine runs the full pipeline once per strategy and reports results for each, so you can compare them side by side.
-
 ---
 
 ### Output statistics
