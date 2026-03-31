@@ -9,20 +9,13 @@ def create_app():
     allowed_origins = os.environ.get(
         "CORS_ORIGINS", "http://localhost:5173"
     ).split(",")
-    CORS(app, origins=allowed_origins)
+    CORS(app, origins=allowed_origins, allow_headers=["Content-Type"])
     app.register_blueprint(api_bp)
 
     @app.errorhandler(Exception)
     def handle_unexpected(e):
         app.logger.exception("Unhandled exception")
         return jsonify({"error": "Internal server error"}), 500
-
-    @app.after_request
-    def add_cors_headers(response):
-        origin = request.headers.get("Origin")
-        if origin and origin in allowed_origins:
-            response.headers["Access-Control-Allow-Origin"] = origin
-        return response
 
     return app
 
