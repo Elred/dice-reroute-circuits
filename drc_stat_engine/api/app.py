@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from drc_stat_engine.api.routes import api_bp
 
@@ -16,6 +16,13 @@ def create_app():
     def handle_unexpected(e):
         app.logger.exception("Unhandled exception")
         return jsonify({"error": "Internal server error"}), 500
+
+    @app.after_request
+    def add_cors_headers(response):
+        origin = request.headers.get("Origin")
+        if origin and origin in allowed_origins:
+            response.headers["Access-Control-Allow-Origin"] = origin
+        return response
 
     return app
 

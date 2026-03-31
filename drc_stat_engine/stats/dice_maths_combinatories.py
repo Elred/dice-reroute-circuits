@@ -176,6 +176,14 @@ def combine_dice(red_dice: int = 0, blue_dice: int = 0, black_dice: int = 0, typ
 # Roll mutation helpers
 # ---------------------------------------------------------------------------
 
+def _remove_each(faces, to_remove):
+    """Remove one occurrence at a time from *faces* for each entry in *to_remove*."""
+    remaining = list(faces)
+    for face in to_remove:
+        remaining.remove(face)
+    return " ".join(sorted(remaining))
+
+
 def remove_dice_from_roll(roll_df, to_remove_dice, type_str="ship"):
     """
     Split roll_df into two parts:
@@ -203,9 +211,7 @@ def remove_dice_from_roll(roll_df, to_remove_dice, type_str="ship"):
         )
 
     removed_df["value"] = removed_df.apply(
-        lambda x: " ".join(sorted(
-            v for v in value_str_to_list(x["value"]) if v not in x["removed_dice"]
-        )),
+        lambda x: _remove_each(value_str_to_list(x["value"]), x["removed_dice"]),
         axis=1,
     )
     for stat in ("damage", "crit", "acc", "blank"):

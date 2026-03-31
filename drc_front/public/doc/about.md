@@ -6,7 +6,7 @@ Use it to evaluate fleet builds, compare upgrade combinations, and understand ho
 ## Basic Usagerategies** — choose one strategy for picking reroll, cancel, dice to change when given choice.
 4. **Calculate** — the engine computes probability distributions and statistics for each selected strategy.
 
-**Note**: Currently, this tool use either combinatories or Monte Carlo simulation to produce results. This means that for large dice pools & attack effects stacks (anything over 8 dice total), the result will not be exact probabilities, but approximated over 100 thousand simulated rolls.
+**Note**: Currently, this tool use either combinatories or Monte Carlo simulation to produce results. This means that for large dice pools & attack effects stacks (anything over 8 dice total, or with enough dice and rerolls that combinatories get very heavy), the result will not be exact probabilities, but approximated over 100 thousand simulated rolls.
 
 (yes, DRC is just brute forcing maths in various ways)
 

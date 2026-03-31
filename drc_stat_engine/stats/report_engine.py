@@ -36,6 +36,12 @@ from drc_stat_engine.stats.strategies import (
 
 
 # ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+REROLL_COST_LIMIT = 25
+
+# ---------------------------------------------------------------------------
 # Backend selector
 # ---------------------------------------------------------------------------
 
@@ -59,7 +65,24 @@ def _select_backend(pool: DicePool, pipeline: List[AttackEffect], backend: str):
             for op in pipeline if op.type == "add_dice"
         )
         total_dice = pool.red + pool.blue + pool.black + added
-        return dice_maths_combinatories if total_dice <= 8 else dice_monte_carlo
+
+        if total_dice > 8:
+            return dice_monte_carlo
+
+        # Reroll cost estimation: route to MC if the largest reroll op
+        # would cause an expensive combine_two cross-join.
+        max_reroll_count = 0
+        for op in pipeline:
+            if op.type == "reroll":
+                effective = min(op.count, total_dice)
+                max_reroll_count = max(max_reroll_count, effective)
+
+        if max_reroll_count > 0:
+            reroll_cost = total_dice * max_reroll_count
+            if reroll_cost > REROLL_COST_LIMIT:
+                return dice_monte_carlo
+
+        return dice_maths_combinatories
     elif backend == "combinatorial":
         return dice_maths_combinatories
     elif backend == "montecarlo":
@@ -265,6 +288,7 @@ def generate_report(
     validate_attack_effect_pipeline(pipeline, dice_pool)
 
     backend_mod = _select_backend(dice_pool, pipeline, backend)
+    engine_type = "monte_carlo" if backend_mod is dice_monte_carlo else "combinatories"
 
     if backend_mod is dice_monte_carlo:
         roll_df = backend_mod.combine_dice(
@@ -298,6 +322,7 @@ def generate_report(
             "crit":       crit_probability(final_df),
             "avg_damage": average_damage(final_df),
             "priority_list": priority_list,
+            "engine_type": engine_type,
         })
     return variants
 
