@@ -32,6 +32,7 @@ export interface VariantResult {
   acc_zero: number
   damage: [number, number][]
   accuracy: [number, number][]
+  engine_type?: string
 }
 
 export interface ReportResponse {

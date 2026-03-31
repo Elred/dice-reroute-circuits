@@ -256,6 +256,11 @@ const chartOptions = {
               </div>
             </div>
           </div>
+
+          <!-- Engine type -->
+          <p v-if="card.variant.engine_type" class="text-[#8892a4] text-[10px] italic text-right mt-1">
+            Engine: {{ card.variant.engine_type }}
+          </p>
         </div>
       </TransitionGroup>
     </div>
