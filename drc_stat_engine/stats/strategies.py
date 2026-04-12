@@ -9,6 +9,15 @@ a concrete one ready for execution.
 from typing import List
 
 from drc_stat_engine.stats.dice_models import AttackEffect
+from drc_stat_engine.stats.profiles import (
+    red_die_ship, blue_die_ship, black_die_ship,
+    red_die_squad, blue_die_squad, black_die_squad,
+)
+
+ALL_FACES = {
+    "ship": [f["value"] for f in red_die_ship + blue_die_ship + black_die_ship],
+    "squad": [f["value"] for f in red_die_squad + blue_die_squad + black_die_squad],
+}
 
 
 # ---------------------------------------------------------------------------
@@ -113,7 +122,7 @@ STRATEGY_PRIORITY_LISTS = {
 }
 
 # Attack effect types that require a resolved priority_list before execution
-PRIORITY_DEPENDENT_OPS = {"reroll", "cancel", "change_die"}
+PRIORITY_DEPENDENT_OPS = {"reroll", "cancel", "change_die", "reroll_all"}
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +151,17 @@ def build_strategy_pipeline(
 
     for op in pipeline:
         if op.type in PRIORITY_DEPENDENT_OPS:
-            if op.type == "change_die":
+            if op.type == "reroll_all":
+                all_faces = ALL_FACES[type_str]
+                result.append(AttackEffect(
+                    type=op.type,
+                    count=op.count,
+                    applicable_results=list(all_faces),
+                    priority_list=list(all_faces),
+                    condition=op.condition,
+                ))
+                continue
+            elif op.type == "change_die":
                 # For change_die, use applicable_results directly as the priority ordering
                 # when the user has specified them; otherwise fall back to the strategy's
                 # change_die sub-key list derived from the target result suffix.

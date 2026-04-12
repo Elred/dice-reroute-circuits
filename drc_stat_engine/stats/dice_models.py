@@ -9,14 +9,19 @@ before any computation takes place.
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+import pandas as pd
+
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
 VALID_TYPES = {"ship", "squad"}
-VALID_ATTACK_EFFECT_TYPES = {"reroll", "cancel", "add_dice", "change_die"}
+VALID_ATTACK_EFFECT_TYPES = {"reroll", "cancel", "add_dice", "change_die", "reroll_all"}
 MAX_DICE = 20
+
+VALID_CONDITION_ATTRIBUTES = {"damage", "crit", "acc", "blank"}
+VALID_CONDITION_OPERATORS = {"lte", "lt", "gte", "gt", "eq", "neq"}
 
 
 # ---------------------------------------------------------------------------
@@ -30,6 +35,44 @@ class DicePool:
     blue: int = 0
     black: int = 0
     type: str = "ship"
+
+
+@dataclass
+class Condition:
+    """A boolean predicate over roll outcome attributes."""
+    attribute: str   # one of "damage", "crit", "acc", "blank"
+    operator: str    # one of "lte", "lt", "gte", "gt", "eq", "neq"
+    threshold: int
+
+    def __post_init__(self):
+        if self.attribute not in VALID_CONDITION_ATTRIBUTES:
+            raise ValueError(
+                f"Invalid condition attribute '{self.attribute}'. "
+                f"Must be one of: {sorted(VALID_CONDITION_ATTRIBUTES)}."
+            )
+        if self.operator not in VALID_CONDITION_OPERATORS:
+            raise ValueError(
+                f"Invalid condition operator '{self.operator}'. "
+                f"Must be one of: {sorted(VALID_CONDITION_OPERATORS)}."
+            )
+        if not isinstance(self.threshold, int):
+            raise ValueError(
+                f"Condition threshold must be an integer, "
+                f"got {type(self.threshold).__name__}."
+            )
+
+
+def evaluate_condition(condition: Condition, roll_df: pd.DataFrame) -> pd.Series:
+    """Return a boolean Series: True for rows where the condition is satisfied."""
+    ops = {
+        "lte": lambda col, t: col <= t,
+        "lt":  lambda col, t: col < t,
+        "gte": lambda col, t: col >= t,
+        "gt":  lambda col, t: col > t,
+        "eq":  lambda col, t: col == t,
+        "neq": lambda col, t: col != t,
+    }
+    return ops[condition.operator](roll_df[condition.attribute], condition.threshold)
 
 
 @dataclass
@@ -51,6 +94,7 @@ class AttackEffect:
     # For change_die: the face value string to set the die to. May be color-agnostic (e.g. "hit")
     # or color-specific (e.g. "R_hit"). Required when type == "change_die".
     target_result: Optional[str] = None
+    condition: Optional[Condition] = None  # Required when type == "reroll_all"
 
 
 # ---------------------------------------------------------------------------
@@ -113,6 +157,11 @@ def validate_attack_effect_pipeline(pipeline: List[AttackEffect], pool: DicePool
             raise ValueError(
                 f"AttackEffect {idx}: 'change_die' effect requires a 'target_result' field."
             )
+        if op.type == "reroll_all":
+            if op.condition is None:
+                raise ValueError(
+                    f"AttackEffect {idx}: 'reroll_all' effect requires a non-None 'condition' field."
+                )
         if op.type == "add_dice":
             d = op.dice_to_add or {}
             added = d.get("red", 0) + d.get("blue", 0) + d.get("black", 0)

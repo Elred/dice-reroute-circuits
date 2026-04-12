@@ -506,3 +506,61 @@ def change_die_face(roll_df, source_results, target_result, type_str="ship"):
         "rng":      rng,
     }
     return result_df
+
+
+def reroll_all_dice(roll_df, condition=None, type_str="ship"):
+    """
+    Re-sample all dice for trials whose outcome satisfies *condition*.
+    Returns (result_df, initial_roll_df).
+    """
+    from drc_stat_engine.stats.dice_models import evaluate_condition
+
+    state = roll_df.attrs["_mc_state"]
+    matrix   = state["matrix"].copy()
+    profiles = state["profiles"]
+    N        = state["N"]
+    rng      = state["rng"]
+    D        = matrix.shape[1]
+
+    initial_roll_df = roll_df
+
+    # Compute per-trial stat totals
+    damage_total = np.zeros(N, dtype=np.int32)
+    crit_total   = np.zeros(N, dtype=np.int32)
+    acc_total    = np.zeros(N, dtype=np.int32)
+    blank_total  = np.zeros(N, dtype=np.int32)
+
+    for d in range(D):
+        face_indices = matrix[:, d]
+        damage_total += profiles[d]["damage"][face_indices].astype(np.int32)
+        crit_total   += profiles[d]["crit"][face_indices].astype(np.int32)
+        acc_total    += profiles[d]["acc"][face_indices].astype(np.int32)
+        blank_total  += profiles[d]["blank"][face_indices].astype(np.int32)
+
+    # Build a per-trial DataFrame to evaluate the condition
+    trial_df = pd.DataFrame({
+        "damage": damage_total,
+        "crit":   crit_total,
+        "acc":    acc_total,
+        "blank":  blank_total,
+    })
+    mask = evaluate_condition(condition, trial_df).values  # boolean array (N,)
+
+    # Re-sample all columns for matching trials
+    matching_rows = np.where(mask)[0]
+    if len(matching_rows) > 0:
+        for d in range(D):
+            n_faces = len(profiles[d]["weights"])
+            matrix[matching_rows, d] = rng.choice(
+                n_faces, size=len(matching_rows), p=profiles[d]["weights"]
+            )
+
+    result_df = _samples_to_roll_df(matrix, profiles, type_str, N)
+    result_df.attrs["_mc_state"] = {
+        "matrix":   matrix,
+        "profiles": profiles,
+        "N":        N,
+        "rng":      rng,
+    }
+
+    return (result_df, initial_roll_df)

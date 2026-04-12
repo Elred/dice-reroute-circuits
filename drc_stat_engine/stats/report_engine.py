@@ -164,6 +164,14 @@ def apply_attack_effect(roll_df, attack_effect: AttackEffect, type_str: str, bac
             type_str=type_str,
         )
 
+    elif attack_effect.type == "reroll_all":
+        result_df, _ = backend_mod.reroll_all_dice(
+            roll_df,
+            condition=attack_effect.condition,
+            type_str=type_str,
+        )
+        return result_df
+
     else:
         raise ValueError(f"Unknown attack effect type '{attack_effect.type}'.")
 
@@ -345,6 +353,9 @@ def _format_pipeline(pipeline: List[AttackEffect]) -> str:
             dice = op.dice_to_add or {}
             r, u, b = dice.get("red", 0), dice.get("blue", 0), dice.get("black", 0)
             parts.append(f"add_dice [{r}R {u}U {b}B]")
+        elif op.type == "reroll_all":
+            c = op.condition
+            parts.append(f"reroll_all [condition: {c.attribute} {c.operator} {c.threshold}]")
         else:
             parts.append(op.type)
     return " | ".join(parts)

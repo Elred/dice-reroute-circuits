@@ -17,10 +17,12 @@ All functions accept and return a roll DataFrame with columns:
 """
 
 from ctypes import ArgumentError
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
 
+from drc_stat_engine.stats.dice_models import Condition, evaluate_condition
 from drc_stat_engine.stats.profiles import (
     black_die_ship, black_die_squad,
     blue_die_ship, blue_die_squad,
@@ -412,6 +414,49 @@ def change_die_face(
         "acc":    "first",
         "blank":  "first",
     })
+
+
+# ---------------------------------------------------------------------------
+# Conditional reroll-all
+# ---------------------------------------------------------------------------
+
+def reroll_all_dice(
+    roll_df: pd.DataFrame,
+    condition: Condition,
+    type_str: str = "ship",
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Reroll every die in the pool for outcomes that satisfy *condition*.
+
+    Returns (result_df, initial_roll_df).
+    """
+    initial_roll_df = roll_df.copy()
+
+    mask = evaluate_condition(condition, roll_df)
+    matching_df = roll_df[mask]
+    non_matching_df = roll_df[~mask]
+
+    if matching_df.empty:
+        return roll_df, initial_roll_df
+
+    matching_proba = matching_df["proba"].sum()
+
+    # Infer pool composition from any row's value string
+    sample_value = roll_df.iloc[0]["value"]
+    counts = value_to_dice_count_dict(sample_value, type_str)
+
+    fresh_df = combine_dice(counts["red"], counts["blue"], counts["black"], type_str)
+    fresh_df["proba"] = fresh_df["proba"] * matching_proba
+
+    result_df = pd.concat([non_matching_df, fresh_df]).groupby("value", as_index=False).agg({
+        "proba":  "sum",
+        "damage": "first",
+        "crit":   "first",
+        "acc":    "first",
+        "blank":  "first",
+    })
+
+    return result_df, initial_roll_df
 
 
 # ---------------------------------------------------------------------------
