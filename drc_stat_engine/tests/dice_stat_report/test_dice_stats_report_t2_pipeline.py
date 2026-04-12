@@ -131,8 +131,8 @@ class TestRunPipeline(unittest.TestCase):
         import drc_stat_engine.stats.report_engine as rmod
         _orig = rmod.apply_attack_effect
 
-        def _bad_apply(roll_df, op, type_str):
-            df = _orig(roll_df, op, type_str).copy()
+        def _bad_apply(roll_df, op, type_str, backend_mod=None):
+            df = _orig(roll_df, op, type_str, backend_mod=backend_mod).copy()
             df["proba"] = df["proba"] * 2
             return df
 

@@ -36,7 +36,7 @@ class TestMetaEndpoint(unittest.TestCase):
 
     def test_attack_effect_types(self):
         data = self.client.get("/api/v1/meta").get_json()
-        self.assertEqual(sorted(data["attack_effect_types"]), ["add_dice", "cancel", "reroll"])
+        self.assertEqual(sorted(data["attack_effect_types"]), ["add_dice", "cancel", "change_die", "reroll"])
 
     def test_result_values_structure(self):
         data = self.client.get("/api/v1/meta").get_json()

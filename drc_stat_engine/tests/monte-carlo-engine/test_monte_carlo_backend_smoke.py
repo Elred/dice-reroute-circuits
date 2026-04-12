@@ -13,10 +13,10 @@ try:
     # Test _select_backend
     pool_small = DicePool(red=2, blue=1, black=0, type='ship')
     pool_large = DicePool(red=5, blue=2, black=2, type='ship')
-    assert _select_backend(pool_small, 'auto') is comb, 'auto small should use comb'
-    assert _select_backend(pool_large, 'auto') is mc, 'auto large should use mc'
-    assert _select_backend(pool_small, 'combinatorial') is comb
-    assert _select_backend(pool_small, 'montecarlo') is mc
+    assert _select_backend(pool_small, [], 'auto') is comb, 'auto small should use comb'
+    assert _select_backend(pool_large, [], 'auto') is mc, 'auto large should use mc'
+    assert _select_backend(pool_small, [], 'combinatorial') is comb
+    assert _select_backend(pool_small, [], 'montecarlo') is mc
     print('PASS: _select_backend')
 
     # Test generate_report with combinatorial backend
@@ -33,7 +33,7 @@ try:
 
     # Test ValueError for unknown backend
     try:
-        _select_backend(pool_small, 'unknown')
+        _select_backend(pool_small, [], 'unknown')
         print('FAIL: expected ValueError')
     except ValueError as e:
         print(f'PASS: ValueError for unknown backend: {e}')

@@ -145,32 +145,32 @@ REQUIRED_KEYS = {"label", "damage", "accuracy", "crit", "avg_damage", "priority_
 
 def test_select_backend_auto_small_pool():
     pool = DicePool(red=2, blue=1, black=0, type="ship")  # pool_size=3
-    result = _select_backend(pool, "auto")
+    result = _select_backend(pool, [], "auto")
     assert result is comb_mod, f"expected comb_mod, got {result}"
 
 
 def test_select_backend_auto_large_pool():
     pool = DicePool(red=5, blue=2, black=2, type="ship")  # pool_size=9
-    result = _select_backend(pool, "auto")
+    result = _select_backend(pool, [], "auto")
     assert result is mc_mod, f"expected mc_mod, got {result}"
 
 
 def test_select_backend_explicit_combinatorial():
     pool = DicePool(red=1, blue=0, black=0, type="ship")
-    result = _select_backend(pool, "combinatorial")
+    result = _select_backend(pool, [], "combinatorial")
     assert result is comb_mod, f"expected comb_mod, got {result}"
 
 
 def test_select_backend_explicit_montecarlo():
     pool = DicePool(red=1, blue=0, black=0, type="ship")
-    result = _select_backend(pool, "montecarlo")
+    result = _select_backend(pool, [], "montecarlo")
     assert result is mc_mod, f"expected mc_mod, got {result}"
 
 
 def test_select_backend_raises_unknown():
     pool = DicePool(red=1, blue=0, black=0, type="ship")
     try:
-        _select_backend(pool, "unknown")
+        _select_backend(pool, [], "unknown")
         assert False, "expected ValueError for unknown backend"
     except ValueError:
         pass

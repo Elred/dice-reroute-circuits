@@ -1,5 +1,5 @@
 """
-Exploratory tests to confirm the cross-color bug in set_die_face.
+Exploratory tests to confirm the cross-color bug in change_die_face.
 These tests MUST FAIL on unfixed code (bug confirmed when they fail).
 After the fix is applied (Task 2), all four tests MUST PASS (Task 3).
 """
@@ -7,7 +7,7 @@ import sys
 sys.path.insert(0, '.')
 
 import pandas as pd
-from drc_stat_engine.stats.dice_maths_combinatories import set_die_face, combine_dice
+from drc_stat_engine.stats.dice_maths_combinatories import change_die_face, combine_dice
 
 
 def dataframes_equal(df1, df2):
@@ -23,7 +23,7 @@ def test_black_pool_red_target():
     """Black pool + R_hit+hit target: result must equal original roll_df (no-op)."""
     roll_df = combine_dice(0, 0, 1, 'ship')
     source_faces = ["B_blank", "B_hit", "B_hit+crit"]
-    result = set_die_face(roll_df, source_faces, "R_hit+hit", "ship")
+    result = change_die_face(roll_df, source_faces, "R_hit+hit", "ship")
     assert dataframes_equal(result, roll_df), (
         f"FAIL: black pool + R_hit+hit target modified roll_df\n"
         f"Original:\n{roll_df.to_string()}\n"
@@ -36,7 +36,7 @@ def test_blue_pool_black_target():
     """Blue pool + B_hit target: result must equal original roll_df (no-op)."""
     roll_df = combine_dice(0, 1, 0, 'ship')
     source_faces = ["U_acc", "U_hit", "U_crit"]
-    result = set_die_face(roll_df, source_faces, "B_hit", "ship")
+    result = change_die_face(roll_df, source_faces, "B_hit", "ship")
     assert dataframes_equal(result, roll_df), (
         f"FAIL: blue pool + B_hit target modified roll_df\n"
         f"Original:\n{roll_df.to_string()}\n"
@@ -49,7 +49,7 @@ def test_red_pool_blue_target():
     """Red pool + U_acc target: result must equal original roll_df (no-op)."""
     roll_df = combine_dice(1, 0, 0, 'ship')
     source_faces = ["R_blank", "R_acc", "R_hit", "R_crit", "R_hit+hit"]
-    result = set_die_face(roll_df, source_faces, "U_acc", "ship")
+    result = change_die_face(roll_df, source_faces, "U_acc", "ship")
     assert dataframes_equal(result, roll_df), (
         f"FAIL: red pool + U_acc target modified roll_df\n"
         f"Original:\n{roll_df.to_string()}\n"
@@ -62,7 +62,7 @@ def test_two_black_pool_red_blank_target():
     """2-black pool + R_blank target: result must equal original roll_df (no-op)."""
     roll_df = combine_dice(0, 0, 2, 'ship')
     source_faces = ["B_blank", "B_hit", "B_hit+crit"]
-    result = set_die_face(roll_df, source_faces, "R_blank", "ship")
+    result = change_die_face(roll_df, source_faces, "R_blank", "ship")
     assert dataframes_equal(result, roll_df), (
         f"FAIL: 2-black pool + R_blank target modified roll_df\n"
         f"Original:\n{roll_df.to_string()}\n"
