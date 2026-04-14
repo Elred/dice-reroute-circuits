@@ -22,13 +22,27 @@ function humanReadableResult(f: string): string {
 
 function opSummary(op: AttackEffect): string {
   if (op.type === 'add_dice') {
+    if (op.color_in_pool) {
+      const prio = op.color_priority ? op.color_priority.join(' > ') : '?'
+      let summary = `Add Dice: pool color [${prio}]`
+      if (op.face_condition) summary += ` if ${humanReadableResult(op.face_condition)} present`
+      return summary
+    }
     const d = op.dice_to_add
     if (!d) return 'Add Dice'
     const parts = []
     if (d.red) parts.push(`${d.red}R`)
     if (d.blue) parts.push(`${d.blue}U`)
     if (d.black) parts.push(`${d.black}B`)
-    return `Add Dice: ${parts.join(' ')}`
+    let summary = `Add Dice: ${parts.join(' ')}`
+    if (op.face_condition) summary += ` if ${humanReadableResult(op.face_condition)} present`
+    return summary
+  }
+  if (op.type === 'add_set_die') {
+    const targetDesc = op.target_result ? humanReadableResult(op.target_result) : '?'
+    let summary = `Add+Set Die [${targetDesc}]`
+    if (op.face_condition) summary += ` if ${humanReadableResult(op.face_condition)} present`
+    return summary
   }
   if (op.type === 'change_die') {
     const sourcesDesc = (op.applicable_results ?? []).length > 0

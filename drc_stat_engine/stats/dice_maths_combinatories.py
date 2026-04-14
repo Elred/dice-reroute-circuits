@@ -22,7 +22,7 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 
-from drc_stat_engine.stats.dice_models import Condition, evaluate_condition
+from drc_stat_engine.stats.dice_models import Condition, evaluate_condition, evaluate_face_condition, select_color_from_pool
 from drc_stat_engine.stats.profiles import (
     black_die_ship, black_die_squad,
     blue_die_ship, blue_die_squad,
@@ -352,6 +352,119 @@ def _resolve_color_agnostic_result(target_result: str, type_str: str) -> str:
         f["crit"],
         f["acc"],
     ))["value"]
+
+
+def add_set_die_to_roll(
+    roll_df: pd.DataFrame,
+    target_result: str,
+    type_str: str = "ship",
+) -> pd.DataFrame:
+    """
+    Add a deterministic die locked to *target_result* to every outcome.
+
+    Unlike add_dice_to_roll (which adds a randomly-rolled die), the added die
+    always shows the specified face — no new randomness is introduced.
+
+    1. Look up face attributes for target_result.
+    2. Append the token to every value string and add attributes to stat columns.
+    3. Re-sort value strings to maintain canonical ordering.
+    4. Group by value string, summing probabilities (distinct outcomes may collide).
+    """
+    attrs = value_to_dice_attr_dict(target_result, type_str)
+
+    df = roll_df.copy()
+    df["value"] = df["value"].apply(
+        lambda v: value_list_to_str(value_str_to_list(v) + [target_result])
+    )
+    df["damage"] = df["damage"] + attrs["damage"]
+    df["crit"]   = df["crit"]   + attrs["crit"]
+    df["acc"]    = df["acc"]    + attrs["acc"]
+    df["blank"]  = df["blank"]  + attrs["blank"]
+
+    return df.groupby("value", as_index=False).agg({
+        "proba":  "sum",
+        "damage": "first",
+        "crit":   "first",
+        "acc":    "first",
+        "blank":  "first",
+    })
+
+
+def conditional_add_partition(roll_df, face_condition, add_fn, **add_kwargs):
+    """Partition roll_df by face_condition, apply add_fn only to matching rows, merge back.
+
+    Parameters
+    ----------
+    roll_df : pd.DataFrame
+        The current roll distribution.
+    face_condition : str
+        A face token (e.g. ``"R_acc"``).  Rows whose value string contains
+        this token are "matching"; the rest are "non-matching".
+    add_fn : callable
+        Either ``add_dice_to_roll`` or ``add_set_die_to_roll``.
+    **add_kwargs
+        Keyword arguments forwarded to *add_fn* (e.g. ``red=1``,
+        ``type_str="ship"``).
+
+    Returns
+    -------
+    pd.DataFrame
+        The merged Roll_DataFrame with the die addition applied only to
+        matching rows.  Non-matching rows are returned unchanged.
+    """
+    mask = roll_df["value"].apply(
+        lambda v: evaluate_face_condition(face_condition, v)
+    )
+    matching_df = roll_df[mask]
+    non_matching_df = roll_df[~mask]
+
+    if matching_df.empty:
+        return roll_df.copy()
+
+    modified_matching_df = add_fn(matching_df, **add_kwargs)
+
+    result_df = pd.concat([modified_matching_df, non_matching_df], ignore_index=True)
+    return result_df
+
+
+def color_in_pool_add(roll_df, color_priority, type_str="ship"):
+    """Partition *roll_df* by selected color and add one die of that color per group.
+
+    Parameters
+    ----------
+    roll_df : pd.DataFrame
+        The current roll distribution.
+    color_priority : list[str]
+        A permutation of ``["red", "blue", "black"]``.
+    type_str : str
+        ``"ship"`` or ``"squad"``.
+
+    Returns
+    -------
+    pd.DataFrame
+        Merged Roll_DataFrame with one die of the dynamically-selected color
+        added to each outcome.
+    """
+    # Determine the selected color for every row
+    selected = roll_df["value"].apply(
+        lambda v: select_color_from_pool(color_priority, v)
+    )
+
+    groups = []
+    for color, idx in selected.groupby(selected).groups.items():
+        group_df = roll_df.loc[idx]
+        kwargs = {"red": 0, "blue": 0, "black": 0, "type_str": type_str}
+        kwargs[color] = 1
+        groups.append(add_dice_to_roll(group_df, **kwargs))
+
+    result_df = pd.concat(groups, ignore_index=True)
+    return result_df.groupby("value", as_index=False).agg({
+        "proba":  "sum",
+        "damage": "first",
+        "crit":   "first",
+        "acc":    "first",
+        "blank":  "first",
+    })
 
 
 def change_die_face(

@@ -55,6 +55,33 @@ ChartJS.register(expandedHitPlugin)
 const report = useReportStore()
 const meta = useMetaStore()
 
+// Diagonal red stripe pattern for =0 bars
+function createStripePattern(baseColor: string, stripeColor: string = '#e53e3e'): CanvasPattern | string {
+  if (typeof document === 'undefined') return baseColor
+  const canvas = document.createElement('canvas')
+  canvas.width = 16
+  canvas.height = 16
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return baseColor
+  ctx.fillStyle = baseColor
+  ctx.fillRect(0, 0, 16, 16)
+  ctx.strokeStyle = stripeColor
+  ctx.lineWidth = 5
+  ctx.beginPath()
+  ctx.moveTo(0, 16)
+  ctx.lineTo(16, 0)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.moveTo(-5, 5)
+  ctx.lineTo(5, -5)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.moveTo(11, 21)
+  ctx.lineTo(21, 11)
+  ctx.stroke()
+  return ctx.createPattern(canvas, 'repeat') ?? baseColor
+}
+
 const STRATEGY_LABELS: Record<string, string> = {
   max_damage:        'Max Damage',
   balanced:          'Balanced',
@@ -77,7 +104,7 @@ function humanReadableResult(f: string): string {
 
 function buildTitle(req: import('../types/api').ReportRequest): string {
   const { dice_pool: p, pipeline } = req
-  const type = p.type.charAt(0).toUpperCase() + p.type.slice(1)
+  const type = req.pool_label ?? (p.type.charAt(0).toUpperCase() + p.type.slice(1))
   const poolParts: string[] = []
   if (p.red)   poolParts.push(`${p.red} Red`)
   if (p.blue)  poolParts.push(`${p.blue} Blue`)
@@ -103,7 +130,21 @@ function buildTitle(req: import('../types/api').ReportRequest): string {
     const resultsDesc = describeResults(op.applicable_results ?? [], p.type)
     return `${OP_LABELS[op.type] ?? op.type} ${countStr} ${resultsDesc}`
   })
-  return opParts.length > 0 ? `${poolStr} — ${opParts.join(', ')}` : poolStr
+  // Defense pipeline summary
+  const defParts = (req.defense_pipeline ?? []).map(op => {
+    switch (op.type) {
+      case 'defense_reroll': return `Def Reroll ${op.count ?? 1}× [${op.mode ?? 'safe'}]`
+      case 'defense_cancel': return `Def Cancel ${op.count ?? 1}×`
+      case 'reduce_damage': return `Reduce ${op.amount ?? 0}`
+      case 'divide_damage': return 'Halve'
+      default: return String(op.type)
+    }
+  })
+
+  let title = poolStr
+  if (opParts.length > 0) title += ` — Attack: ${opParts.join(', ')}`
+  if (defParts.length > 0) title += ` — Defense: ${defParts.join(', ')}`
+  return title
 }
 
 // Keep computed reportTitle for any remaining references
@@ -117,13 +158,54 @@ const allCards = computed(() =>
 )
 
 function damageChartData(variant: VariantResult) {
-  const entries: [string, number][] = variant.damage.map(([t, p], i) =>
+  const src = variant.pre_defense ?? variant
+  const entries: [string, number][] = src.damage.map(([t, p], i) =>
     i === 0
-      ? ['=0', variant.damage_zero * 100]
+      ? ['=0', src.damage_zero * 100]
       : [`≥${t}`, p * 100]
   )
-  const colors = entries.map((_, i) => i === 0 ? '#e53e3e' : '#d69e2e')
-  const borders = entries.map((_, i) => i === 0 ? '#c53030' : '#b7791f')
+
+  // When post_defense exists, show both datasets overlaid on the same chart
+  if (variant.post_defense) {
+    const postEntries: [string, number][] = variant.post_defense.damage.map(([t, p], i) =>
+      i === 0
+        ? ['=0', variant.post_defense!.damage_zero * 100]
+        : [`≥${t}`, p * 100]
+    )
+    // Use the longer label set (pre may have more thresholds than post or vice versa)
+    const maxLen = Math.max(entries.length, postEntries.length)
+    const labels = Array.from({ length: maxLen }, (_, i) => {
+      if (i === 0) return '=0'
+      return `≥${i}`
+    })
+    // Pad shorter arrays with 0
+    const preData = labels.map((_, i) => entries[i]?.[1] ?? 0)
+    const postData = labels.map((_, i) => postEntries[i]?.[1] ?? 0)
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Pre-Defense',
+          data: preData,
+          backgroundColor: preData.map((_, i) => i === 0 ? createStripePattern('#d69e2e') : '#d69e2e'),
+          borderColor: preData.map((_, i) => i === 0 ? '#d69e2e' : '#b7791f'),
+          borderWidth: preData.map((_, i) => i === 0 ? 3 : 1),
+        },
+        {
+          label: 'Post-Defense',
+          data: postData,
+          backgroundColor: postData.map(() => '#48bb78'),
+          borderColor: postData.map(() => '#276749'),
+          borderWidth: 1,
+        },
+      ],
+    }
+  }
+
+  // No defense — single dataset
+  const colors = entries.map((_, i) => i === 0 ? createStripePattern('#d69e2e') : '#d69e2e')
+  const borders = entries.map((_, i) => i === 0 ? '#d69e2e' : '#b7791f')
   return {
     labels: entries.map(([l]) => l),
     datasets: [{
@@ -131,19 +213,20 @@ function damageChartData(variant: VariantResult) {
       data: entries.map(([, v]) => v),
       backgroundColor: colors,
       borderColor: borders,
-      borderWidth: 1,
+      borderWidth: entries.map((_, i) => i === 0 ? 3 : 1),
     }],
   }
 }
 
 function accuracyChartData(variant: VariantResult) {
-  const entries: [string, number][] = variant.accuracy.map(([t, p], i) =>
+  const src = variant.pre_defense ?? variant
+  const entries: [string, number][] = src.accuracy.map(([t, p], i) =>
     i === 0
-      ? ['=0', variant.acc_zero * 100]
+      ? ['=0', src.acc_zero * 100]
       : [`≥${t}`, p * 100]
   )
-  const colors = entries.map((_, i) => i === 0 ? '#e53e3e' : '#4299e1')
-  const borders = entries.map((_, i) => i === 0 ? '#c53030' : '#2b6cb0')
+  const colors = entries.map((_, i) => i === 0 ? createStripePattern('#4299e1') : '#4299e1')
+  const borders = entries.map((_, i) => i === 0 ? '#4299e1' : '#2b6cb0')
   return {
     labels: entries.map(([l]) => l),
     datasets: [{
@@ -151,7 +234,7 @@ function accuracyChartData(variant: VariantResult) {
       data: entries.map(([, v]) => v),
       backgroundColor: colors,
       borderColor: borders,
-      borderWidth: 1,
+      borderWidth: entries.map((_, i) => i === 0 ? 3 : 1),
     }],
   }
 }
@@ -177,7 +260,35 @@ const chartOptions = {
     intersect: false,
   },
   plugins: {
-    legend: { display: false },
+    legend: {
+      display: true,
+      labels: {
+        color: '#f0f0f0',
+        font: { size: 10 },
+        boxWidth: 12,
+        generateLabels(chart: any) {
+          const datasets = chart.data.datasets
+          return datasets.map((ds: any, i: number) => {
+            // Use the last backgroundColor (always a solid color, not the =0 pattern)
+            const bg = Array.isArray(ds.backgroundColor)
+              ? ds.backgroundColor[ds.backgroundColor.length - 1]
+              : ds.backgroundColor
+            const bc = Array.isArray(ds.borderColor)
+              ? ds.borderColor[ds.borderColor.length - 1]
+              : ds.borderColor
+            return {
+              text: ds.label,
+              fillStyle: bg,
+              strokeStyle: bc,
+              lineWidth: 1,
+              fontColor: '#f0f0f0',
+              datasetIndex: i,
+              hidden: !chart.isDatasetVisible(i),
+            }
+          })
+        },
+      },
+    },
     tooltip: {
       callbacks: {
         label: (ctx: any) => formatPct(ctx.parsed.y),
@@ -222,8 +333,18 @@ const chartOptions = {
         <div v-for="card in allCards" :key="card.key"
              class="bg-[#252840] rounded-lg p-4 space-y-4">
 
-          <!-- Title (pool + pipeline) -->
-          <p class="text-[#f0f0f0] text-sm font-semibold">{{ buildTitle(card.group.request) }}</p>
+          <!-- Title (pool + pipeline) + dismiss -->
+          <div class="flex items-start gap-2">
+            <p class="flex-1 text-[#f0f0f0] text-sm font-semibold">{{ buildTitle(card.group.request) }}</p>
+            <button
+              @click="report.removeGroup(card.group.id)"
+              class="w-6 h-6 rounded bg-[#1a1d2e] text-[#8892a4] hover:text-[#e53e3e] text-xs flex-shrink-0 flex items-center justify-center"
+              title="Dismiss"
+            >✕</button>
+          </div>
+
+          <!-- Pre-Defense label (shown when defense pipeline was applied) -->
+          <p v-if="card.variant.pre_defense" class="text-[#d69e2e] text-xs font-semibold uppercase tracking-wider mb-1">Pre-Defense</p>
 
           <!-- Key stats -->
           <div class="flex gap-6 text-sm">
@@ -233,11 +354,11 @@ const chartOptions = {
             </div>
             <div>
               <span class="text-[#8892a4] text-xs">Avg Damage</span>
-              <p class="text-[#f0f0f0] font-mono font-semibold">{{ card.variant.avg_damage.toFixed(3) }}</p>
+              <p class="text-[#f0f0f0] font-mono font-semibold">{{ (card.variant.pre_defense?.avg_damage ?? card.variant.avg_damage).toFixed(3) }}</p>
             </div>
             <div>
               <span class="text-[#8892a4] text-xs">Crit %</span>
-              <p class="text-[#f0f0f0] font-mono font-semibold">{{ (card.variant.crit * 100).toFixed(3) }}%</p>
+              <p class="text-[#f0f0f0] font-mono font-semibold">{{ ((card.variant.pre_defense?.crit ?? card.variant.crit) * 100).toFixed(3) }}%</p>
             </div>
           </div>
 
@@ -249,7 +370,7 @@ const chartOptions = {
                 <Bar :data="damageChartData(card.variant)" :options="chartOptions" />
               </div>
             </div>
-            <div v-if="card.variant.accuracy.length > 1">
+            <div v-if="(card.variant.pre_defense?.accuracy ?? card.variant.accuracy)?.length > 1">
               <p class="text-[#8892a4] text-xs mb-1">Cumulative Accuracy</p>
               <div class="h-36">
                 <Bar :data="accuracyChartData(card.variant)" :options="chartOptions" />
@@ -261,6 +382,25 @@ const chartOptions = {
           <p v-if="card.variant.engine_type" class="text-[#8892a4] text-[10px] italic text-right mt-1">
             Engine: {{ card.variant.engine_type }}
           </p>
+
+          <!-- Post-Defense Stats (shown when defense pipeline was applied) -->
+          <template v-if="card.variant.post_defense">
+            <div class="border-t border-[#276749]/30 pt-3 mt-2">
+              <p class="text-[#48bb78] text-xs font-semibold uppercase tracking-wider mb-2">Post-Defense</p>
+
+              <!-- Post-defense key stats -->
+              <div class="flex gap-6 text-sm">
+                <div>
+                  <span class="text-[#8892a4] text-xs">Avg Damage</span>
+                  <p class="text-[#48bb78] font-mono font-semibold">{{ card.variant.post_defense.avg_damage.toFixed(3) }}</p>
+                </div>
+                <div>
+                  <span class="text-[#8892a4] text-xs">Crit %</span>
+                  <p class="text-[#48bb78] font-mono font-semibold">{{ (card.variant.post_defense.crit * 100).toFixed(3) }}%</p>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
       </TransitionGroup>
     </div>

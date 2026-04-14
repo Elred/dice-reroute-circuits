@@ -9,7 +9,7 @@ const emit = defineEmits<{ close: [] }>()
 const config = useConfigStore()
 const meta = useMetaStore()
 
-const opType = ref<'reroll' | 'cancel' | 'add_dice' | 'change_die'>('reroll')
+const opType = ref<'reroll' | 'cancel' | 'add_dice' | 'change_die' | 'add_set_die'>('reroll')
 const countMode = ref<'any' | 'count'>('any')
 const count = ref(1)
 const selectedResults = ref<string[]>([])
@@ -17,6 +17,10 @@ const targetResult = ref<string | null>(null)
 const addRed = ref(0)
 const addBlue = ref(0)
 const addBlack = ref(0)
+const faceCondition = ref<string | null>(null)
+const showFaceCondition = ref(false)
+const colorInPool = ref(false)
+const colorPriority = ref<[string, string, string]>(['red', 'blue', 'black'])
 
 // Sort order: blank < acc < hit < crit < doubles (hit+hit, hit+crit)
 const FACE_ORDER = ['blank', 'acc', 'hit+crit', 'hit+hit', 'crit', 'hit']
@@ -55,6 +59,9 @@ const setDieTargetFaces = computed(() =>
     faces: g.faces.filter(f => !f.endsWith('_blank')),
   })).filter(g => g.faces.length > 0)
 )
+
+// Faces for the add_set_die target picker — all color-specific faces including blanks
+const addSetDieTargetFaces = computed(() => resultsByColor.value)
 
 // Human-readable label for a result value string
 function humanReadableResultLabel(face: string): string {
@@ -105,16 +112,39 @@ watch([opType, () => config.pool.type], () => {
   selectedResults.value = []
   targetResult.value = null
   showCustomResults.value = false
+  faceCondition.value = null
+  showFaceCondition.value = false
+  colorInPool.value = false
+  colorPriority.value = ['red', 'blue', 'black']
 })
+
+function movePriority(index: number, direction: -1 | 1) {
+  const target = index + direction
+  if (target < 0 || target > 2) return
+  const arr = [...colorPriority.value] as [string, string, string]
+  ;[arr[index], arr[target]] = [arr[target], arr[index]]
+  colorPriority.value = arr
+}
+
+const COLOR_ACCENT: Record<string, string> = { red: '#e53e3e', blue: '#4299e1', black: '#718096' }
 
 function submit() {
   let op: AttackEffect
   if (opType.value === 'add_dice') {
-    if (addRed.value + addBlue.value + addBlack.value === 0) return
-    op = { type: 'add_dice', dice_to_add: { red: addRed.value, blue: addBlue.value, black: addBlack.value } }
+    if (colorInPool.value) {
+      op = { type: 'add_dice', dice_to_add: { red: 0, blue: 0, black: 0 }, color_in_pool: true, color_priority: [...colorPriority.value] as [string, string, string] }
+    } else {
+      if (addRed.value + addBlue.value + addBlack.value === 0) return
+      op = { type: 'add_dice', dice_to_add: { red: addRed.value, blue: addBlue.value, black: addBlack.value } }
+    }
+    if (faceCondition.value) op.face_condition = faceCondition.value
   } else if (opType.value === 'change_die') {
     if (selectedResults.value.length === 0 || targetResult.value === null) return
     op = { type: 'change_die', applicable_results: [...selectedResults.value], target_result: targetResult.value }
+  } else if (opType.value === 'add_set_die') {
+    if (targetResult.value === null) return
+    op = { type: 'add_set_die', target_result: targetResult.value }
+    if (faceCondition.value) op.face_condition = faceCondition.value
   } else {
     if (selectedResults.value.length === 0) return
     // count='any' is passed as-is to the API; the backend resolves it to pool size
@@ -127,10 +157,14 @@ function submit() {
 
 const canSubmit = computed(() => {
   if (opType.value === 'add_dice') {
+    if (colorInPool.value) {
+      return config.totalDiceCount + 1 <= 20
+    }
     const adding = addRed.value + addBlue.value + addBlack.value
     return adding > 0 && config.totalDiceCount + adding <= 20
   }
   if (opType.value === 'change_die') return selectedResults.value.length > 0 && targetResult.value !== null
+  if (opType.value === 'add_set_die') return targetResult.value !== null && config.totalDiceCount + 1 <= 20
   return selectedResults.value.length > 0 && (countMode.value === 'any' || count.value >= 1)
 })
 </script>
@@ -140,9 +174,9 @@ const canSubmit = computed(() => {
     <h3 class="text-[#d69e2e] text-xs font-semibold uppercase tracking-wider">Add Attack Effect</h3>
 
     <!-- Op type selector -->
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2">
       <button
-        v-for="[t, tLabel] in [['reroll', 'Reroll'], ['cancel', 'Cancel'], ['add_dice', 'Add Dice'], ['change_die', 'Change Die']]"
+        v-for="[t, tLabel] in [['add_dice', 'Add'], ['add_set_die', 'Add+Set'], ['reroll', 'Reroll'], ['change_die', 'Change'], ['cancel', 'Cancel']]"
         :key="t"
         @click="opType = t as any"
         :class="[
@@ -153,7 +187,7 @@ const canSubmit = computed(() => {
     </div>
 
     <!-- reroll / cancel fields -->
-    <template v-if="opType !== 'add_dice' && opType !== 'change_die'">
+    <template v-if="opType !== 'add_dice' && opType !== 'change_die' && opType !== 'add_set_die'">
       <div class="flex items-center gap-4">
         <label class="flex items-center gap-1 cursor-pointer">
           <input type="radio" v-model="countMode" value="any" class="accent-[#d69e2e]" />
@@ -337,9 +371,46 @@ const canSubmit = computed(() => {
       </div>
     </template>
 
+    <!-- add_set_die fields -->
+    <template v-else-if="opType === 'add_set_die'">
+      <div>
+        <p class="text-[#8892a4] text-xs font-semibold mb-1">Result to add+set</p>
+        <div class="grid grid-cols-3 gap-x-3">
+          <div v-for="group in addSetDieTargetFaces" :key="group.color">
+            <p class="text-xs font-semibold mb-0.5" :style="{ color: group.accent }">{{ group.label }}</p>
+            <div class="flex flex-col gap-1 mb-1">
+              <label
+                v-for="face in group.faces"
+                :key="face"
+                class="flex items-center gap-1 cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  :value="face"
+                  v-model="targetResult"
+                  class="accent-[#d69e2e]"
+                />
+                <span class="text-[#f0f0f0] text-xs font-mono">{{ humanReadableResultLabel(face) }}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <p v-if="config.totalDiceCount + 1 > 20" class="text-[#e53e3e] text-xs">
+          Exceeds 20-dice limit (currently {{ config.totalDiceCount }}).
+        </p>
+      </div>
+    </template>
+
     <!-- add_dice fields -->
-    <template v-else>
-      <div class="grid grid-cols-3 gap-2">
+    <template v-else-if="opType === 'add_dice'">
+      <!-- Color in pool toggle -->
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" v-model="colorInPool" class="accent-[#d69e2e]" />
+        <span class="text-[#f0f0f0] text-xs">Color from pool</span>
+      </label>
+
+      <!-- Standard R/U/B inputs (hidden when colorInPool) -->
+      <div v-if="!colorInPool" class="grid grid-cols-3 gap-2">
         <div>
           <label class="text-xs block mb-0.5 text-[#e53e3e]">Red</label>
           <input v-model.number="addRed" type="number" min="0"
@@ -356,10 +427,83 @@ const canSubmit = computed(() => {
             class="w-full bg-[#1a1d2e] text-[#f0f0f0] rounded px-2 py-1 text-xs border border-[#8892a4]/30 focus:border-[#d69e2e] outline-none" />
         </div>
       </div>
-      <p v-if="config.totalDiceCount + addRed + addBlue + addBlack > 20" class="text-[#e53e3e] text-xs">
+      <p v-if="!colorInPool && config.totalDiceCount + addRed + addBlue + addBlack > 20" class="text-[#e53e3e] text-xs">
         Exceeds 20-dice limit (currently {{ config.totalDiceCount }}).
       </p>
+
+      <!-- Color priority selector (shown when colorInPool) -->
+      <div v-if="colorInPool" class="space-y-1">
+        <p class="text-[#8892a4] text-xs font-semibold">Color priority</p>
+        <div class="flex flex-col gap-1">
+          <div
+            v-for="(color, idx) in colorPriority"
+            :key="color"
+            class="flex items-center gap-2 bg-[#1a1d2e] rounded px-2 py-1"
+          >
+            <span class="text-xs font-semibold w-12" :style="{ color: COLOR_ACCENT[color] }">{{ color.charAt(0).toUpperCase() + color.slice(1) }}</span>
+            <span class="text-[#8892a4] text-xs flex-1">#{{ idx + 1 }}</span>
+            <button
+              @click="movePriority(idx, -1)"
+              :disabled="idx === 0"
+              class="w-5 h-5 rounded bg-[#252840] text-[#8892a4] hover:text-[#d69e2e] disabled:opacity-30 text-xs"
+            >↑</button>
+            <button
+              @click="movePriority(idx, 1)"
+              :disabled="idx === 2"
+              class="w-5 h-5 rounded bg-[#252840] text-[#8892a4] hover:text-[#d69e2e] disabled:opacity-30 text-xs"
+            >↓</button>
+          </div>
+        </div>
+        <p v-if="config.totalDiceCount + 1 > 20" class="text-[#e53e3e] text-xs">
+          Exceeds 20-dice limit (currently {{ config.totalDiceCount }}).
+        </p>
+      </div>
     </template>
+
+    <!-- Face condition (optional, for add_dice and add_set_die) -->
+    <div v-if="opType === 'add_dice' || opType === 'add_set_die'" class="space-y-1">
+      <button
+        @click="showFaceCondition = !showFaceCondition; if (!showFaceCondition) faceCondition = null"
+        class="flex items-center gap-1 text-[#8892a4] text-xs hover:text-[#f0f0f0] transition-colors"
+      >
+        <span>{{ showFaceCondition ? '▾' : '▸' }}</span>
+        <span>Condition: only if result present</span>
+        <span v-if="faceCondition" class="ml-1 text-[#d69e2e] font-mono">{{ faceCondition }}</span>
+      </button>
+      <div v-if="showFaceCondition && hasResults" class="pl-3 pt-1">
+        <div class="flex flex-wrap items-center gap-2 mb-1">
+          <label class="flex items-center gap-1 cursor-pointer">
+            <input
+              type="radio"
+              :value="null"
+              v-model="faceCondition"
+              class="accent-[#d69e2e]"
+            />
+            <span class="text-[#8892a4] text-xs italic">None</span>
+          </label>
+        </div>
+        <div class="grid grid-cols-3 gap-x-3">
+          <div v-for="group in resultsByColor" :key="group.color">
+            <p class="text-xs font-semibold mb-0.5" :style="{ color: group.accent }">{{ group.label }}</p>
+            <div class="flex flex-col gap-1 mb-1">
+              <label
+                v-for="face in group.faces"
+                :key="face"
+                class="flex items-center gap-1 cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  :value="face"
+                  v-model="faceCondition"
+                  class="accent-[#d69e2e]"
+                />
+                <span class="text-[#f0f0f0] text-xs font-mono">{{ humanReadableResultLabel(face) }}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="flex gap-2 pt-1">
       <button

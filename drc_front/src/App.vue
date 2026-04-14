@@ -5,8 +5,8 @@ import { useConfigStore } from './stores/configStore'
 import { useReport } from './composables/useReport'
 import DicePoolConfig from './components/DicePoolConfig.vue'
 import AttackEffectPipeline from './components/AttackEffectPipeline.vue'
-import StrategySelector from './components/StrategySelector.vue'
 import ResultsPanel from './components/ResultsPanel.vue'
+import DefenseEffectPipeline from './components/DefenseEffectPipeline.vue'
 import AboutModal from './components/AboutModal.vue'
 
 const showAbout = ref(false)
@@ -46,7 +46,7 @@ const canCalculate = () => !config.isPoolEmpty && config.strategies.length > 0
       <aside class="w-full md:w-80 lg:w-96 flex-shrink-0 space-y-3 overflow-y-auto">
         <DicePoolConfig />
         <AttackEffectPipeline />
-        <StrategySelector />
+        <DefenseEffectPipeline />
 
         <button
           @click="calculate"
