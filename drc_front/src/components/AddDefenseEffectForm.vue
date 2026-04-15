@@ -9,7 +9,7 @@ const config = useConfigStore()
 const meta = useMetaStore()
 
 const opType = ref<'defense_reroll' | 'defense_cancel' | 'reduce_damage' | 'divide_damage'>('defense_reroll')
-const mode = ref<'safe' | 'could_be_blank'>('safe')
+const mode = ref<'safe' | 'gamble'>('safe')
 const count = ref(1)
 const amount = ref(1)
 const selectedResults = ref<string[]>([])
@@ -22,7 +22,7 @@ const MODE_INFO: Record<string, { label: string; desc: string; priority: string 
     desc: 'Only rerolls dice whose faces cannot produce a blank. Guaranteed to not make things worse.',
     priority: 'R hit+hit › B hit+crit › U crit › U hit',
   },
-  could_be_blank: {
+  gamble: {
     label: 'Gamble',
     desc: 'Rerolls dice whose faces could become blank. Higher damage reduction potential but riskier.',
     priority: 'R hit+hit › B hit+crit › R crit › R hit › U crit › U hit › B hit',
@@ -92,7 +92,7 @@ const canSubmit = computed(() => {
           <span class="text-[#f0f0f0] text-xs">Safe</span>
         </label>
         <label class="flex items-center gap-1 cursor-pointer">
-          <input type="radio" v-model="mode" value="could_be_blank" class="accent-[#68d391]" />
+          <input type="radio" v-model="mode" value="gamble" class="accent-[#68d391]" />
           <span class="text-[#f0f0f0] text-xs">Gamble</span>
         </label>
         <button
@@ -102,7 +102,7 @@ const canSubmit = computed(() => {
         >i</button>
       </div>
       <div v-if="showModeInfo" class="bg-[#0f1117] border border-[#68d391]/30 rounded p-3 text-xs space-y-2">
-        <div v-for="m in ['safe', 'could_be_blank'] as const" :key="m" class="space-y-0.5">
+        <div v-for="m in ['safe', 'gamble'] as const" :key="m" class="space-y-0.5">
           <p class="text-[#68d391] font-semibold">{{ MODE_INFO[m].label }}</p>
           <p class="text-[#8892a4] leading-snug">{{ MODE_INFO[m].desc }}</p>
           <p class="text-[#8892a4] leading-snug"><span class="text-[#f0f0f0] font-medium">Priority:</span> {{ MODE_INFO[m].priority }}</p>

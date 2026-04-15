@@ -22,10 +22,10 @@ from drc_stat_engine.stats.dice_models import (
 # Strategies / Generators
 # ---------------------------------------------------------------------------
 
-valid_modes = st.sampled_from(["safe", "could_be_blank"])
+valid_modes = st.sampled_from(["safe", "gamble"])
 positive_ints = st.integers(min_value=1, max_value=100)
 
-# Valid defense_reroll: mode in {"safe", "could_be_blank"}, count > 0
+# Valid defense_reroll: mode in {"safe", "gamble"}, count > 0
 valid_defense_reroll = st.builds(
     DefenseEffect,
     type=st.just("defense_reroll"),
@@ -66,9 +66,9 @@ invalid_type_strings = st.text(min_size=1, max_size=30).filter(
     lambda s: s not in VALID_DEFENSE_EFFECT_TYPES
 )
 
-# Invalid modes for defense_reroll (not "safe" or "could_be_blank")
+# Invalid modes for defense_reroll (not "safe" or "gamble")
 invalid_modes = st.one_of(
-    st.text(min_size=1, max_size=20).filter(lambda s: s not in ("safe", "could_be_blank")),
+    st.text(min_size=1, max_size=20).filter(lambda s: s not in ("safe", "gamble")),
 )
 
 # Non-positive integers for count/amount
@@ -82,7 +82,7 @@ failed = 0
 errors = []
 
 # ---------------------------------------------------------------------------
-# Test 1: Valid defense_reroll with mode "safe" or "could_be_blank" and count > 0
+# Test 1: Valid defense_reroll with mode "safe" or "gamble" and count > 0
 # ---------------------------------------------------------------------------
 t1_pass = True
 t1_error = None
@@ -100,7 +100,7 @@ except Exception as e:
     t1_error = str(e)
 
 if t1_pass:
-    print("PASS: Valid defense_reroll accepted (mode safe/could_be_blank, count > 0)")
+    print("PASS: Valid defense_reroll accepted (mode safe/gamble, count > 0)")
     passed += 1
 else:
     print(f"FAIL: Valid defense_reroll — {t1_error}")

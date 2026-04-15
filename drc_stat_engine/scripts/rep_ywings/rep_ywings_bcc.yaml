@@ -1,0 +1,100 @@
+# GAR Y-Wings vs PDIC
+
+# Squadrons:
+# • Ahsoka Tano - Delta-7 Aethersprite Squadron (23)
+# • Anakin Skywalker - Delta-7 Aethersprite Squadron (24)
+# • Axe - V-19 Torrent Squadron (17)
+# • 7 x BTL-B Y-wing Squadron (70)
+# = 134 Points
+
+name: "GAR Y-Wings vs PDIC"
+
+column_labels:
+  label: "Label"
+  pre_avg: "Average Damage"
+  post_avg: "Average after PDIC"
+  diff_avg: "Average Saved"
+  threshold: "Damage"
+  cumul_pre: "Cumulated Damage"
+  cumul_post: "Cumulated after PDIC"
+  cumul_saved: "Cumulated Saved Damage"
+
+attacks:
+  - label: "Ahsoka"
+    pool: { red: 0, blue: 1, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects:
+      - { type: reroll, count: 1, applicable_results: [U_acc, U_crit] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Anakin"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects:
+      - { type: reroll, count: 1, applicable_results: [B_blank] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Axe"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+  
+  - label: "Y-Wing #1"
+    pool: { red: 0, blue: 0, black: 1, type: ship }
+    strategy: max_damage
+    attack_effects: 
+      - { type: reroll, count: 1, applicable_results: [B_blank] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Y-Wing #2"
+    pool: { red: 0, blue: 0, black: 1, type: ship }
+    strategy: max_damage
+    attack_effects: 
+      - { type: reroll, count: 1, applicable_results: [B_blank] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Y-Wing #3"
+    pool: { red: 0, blue: 0, black: 1, type: ship }
+    strategy: max_damage
+    attack_effects: 
+      - { type: reroll, count: 1, applicable_results: [B_blank] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Y-Wing #4"
+    pool: { red: 0, blue: 0, black: 1, type: ship }
+    strategy: max_damage
+    attack_effects: 
+      - { type: reroll, count: 1, applicable_results: [B_blank] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Y-Wing #5"
+    pool: { red: 0, blue: 0, black: 1, type: ship }
+    strategy: max_damage
+    attack_effects: 
+      - { type: reroll, count: 1, applicable_results: [B_blank] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Y-Wing #6"
+    pool: { red: 0, blue: 0, black: 1, type: ship }
+    strategy: max_damage
+    attack_effects: 
+      - { type: reroll, count: 1, applicable_results: [B_blank] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Y-Wing #7"
+    pool: { red: 0, blue: 0, black: 1, type: ship }
+    strategy: max_damage
+    attack_effects: 
+      - { type: reroll, count: 1, applicable_results: [B_blank] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }

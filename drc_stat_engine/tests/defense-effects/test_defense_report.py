@@ -121,7 +121,7 @@ t12_pass = True
 t12_error = None
 
 try:
-    @given(mode=st.sampled_from(["safe", "could_be_blank"]))
+    @given(mode=st.sampled_from(["safe", "gamble"]))
     @settings(max_examples=100)
     def test_probability_integrity_after_defense_reroll(mode):
         pool = DicePool(red=1, blue=1, black=0, type="ship")

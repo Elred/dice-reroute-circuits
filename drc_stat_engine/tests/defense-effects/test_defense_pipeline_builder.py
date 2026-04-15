@@ -3,7 +3,7 @@ test_defense_pipeline_builder.py — Tests for DEFENSE_PRIORITY_LISTS and build_
 
 Covers:
 - DEFENSE_PRIORITY_LISTS constant values (Req 13.2, 13.3, 13.4)
-- build_defense_pipeline resolves priority_list for defense_reroll (safe + could_be_blank)
+- build_defense_pipeline resolves priority_list for defense_reroll (safe + gamble)
 - build_defense_pipeline resolves priority_list for defense_cancel
 - applicable_results filtering preserves priority ordering (Req 2.3, 3.2, 13.5)
 - reduce_damage and divide_damage pass through unchanged
@@ -32,18 +32,18 @@ try:
     check("ship safe reroll priority",
           DEFENSE_PRIORITY_LISTS["ship"]["defense_reroll"]["safe"] == ["R_hit+hit", "B_hit+crit", "U_crit", "U_hit"])
 
-    check("ship could_be_blank reroll priority",
-          DEFENSE_PRIORITY_LISTS["ship"]["defense_reroll"]["could_be_blank"] == ["R_hit+hit", "B_hit+crit", "R_crit", "R_hit", "U_crit", "U_hit", "B_hit"])
+    check("ship gamble reroll priority",
+          DEFENSE_PRIORITY_LISTS["ship"]["defense_reroll"]["gamble"] == ["R_hit+hit", "B_hit+crit", "R_crit", "R_hit", "U_crit", "U_hit", "B_hit"])
 
     check("ship defense_cancel priority",
           DEFENSE_PRIORITY_LISTS["ship"]["defense_cancel"] == ["B_hit+crit", "R_hit+hit", "U_crit", "R_crit", "R_hit", "U_hit", "B_hit"])
 
     # --- Constant values (squad) — crits are worthless, never rerolled/cancelled ---
     check("squad safe reroll priority (no crits)",
-          DEFENSE_PRIORITY_LISTS["squad"]["defense_reroll"]["safe"] == ["R_hit+hit", "R_hit", "U_hit"])
+          DEFENSE_PRIORITY_LISTS["squad"]["defense_reroll"]["safe"] == ["R_hit+hit", "B_hit+crit", "B_hit", "U_hit"])
 
-    check("squad could_be_blank reroll priority (no crits)",
-          DEFENSE_PRIORITY_LISTS["squad"]["defense_reroll"]["could_be_blank"] == ["R_hit+hit", "R_hit", "U_hit", "B_hit", "B_hit+crit"])
+    check("squad gamble reroll priority (no crits)",
+          DEFENSE_PRIORITY_LISTS["squad"]["defense_reroll"]["gamble"] == ["R_hit+hit", "R_hit", "U_hit", "B_hit", "B_hit+crit"])
 
     check("squad defense_cancel priority (no crits)",
           DEFENSE_PRIORITY_LISTS["squad"]["defense_cancel"] == ["R_hit+hit", "R_hit", "U_hit", "B_hit", "B_hit+crit"])
@@ -55,10 +55,10 @@ try:
           result[0].priority_list == ["R_hit+hit", "B_hit+crit", "U_crit", "U_hit"],
           f"got {result[0].priority_list}")
 
-    # --- defense_reroll could_be_blank, no applicable_results ---
-    e = DefenseEffect(type="defense_reroll", count=1, mode="could_be_blank")
+    # --- defense_reroll gamble, no applicable_results ---
+    e = DefenseEffect(type="defense_reroll", count=1, mode="gamble")
     result = build_defense_pipeline([e])
-    check("defense_reroll could_be_blank resolves full priority",
+    check("defense_reroll gamble resolves full priority",
           result[0].priority_list == ["R_hit+hit", "B_hit+crit", "R_crit", "R_hit", "U_crit", "U_hit", "B_hit"],
           f"got {result[0].priority_list}")
 

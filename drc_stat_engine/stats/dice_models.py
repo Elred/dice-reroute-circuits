@@ -131,7 +131,7 @@ class DefenseEffect:
     type: str
     # For defense_reroll/defense_cancel: how many dice to affect.
     count: int = 1
-    # For defense_reroll: "safe" or "could_be_blank"
+    # For defense_reroll: "safe" or "gamble"
     mode: Optional[str] = None
     # For reduce_damage: flat damage reduction value N.
     amount: int = 0
@@ -306,10 +306,10 @@ def validate_defense_pipeline(pipeline: List[DefenseEffect]) -> None:
                 raise ValueError(
                     f"DefenseEffect {idx}: 'defense_reroll' requires a 'mode' field."
                 )
-            if effect.mode not in ("safe", "could_be_blank"):
+            if effect.mode not in ("safe", "gamble"):
                 raise ValueError(
                     f"DefenseEffect {idx}: defense_reroll mode must be "
-                    f"'safe' or 'could_be_blank', got '{effect.mode}'."
+                    f"'safe' or 'gamble', got '{effect.mode}'."
                 )
             if effect.count <= 0:
                 raise ValueError(

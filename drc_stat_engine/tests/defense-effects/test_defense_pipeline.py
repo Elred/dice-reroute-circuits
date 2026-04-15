@@ -53,7 +53,7 @@ def defense_effect_lists(draw):
     for _ in range(n):
         t = draw(st.sampled_from(["defense_reroll", "defense_cancel", "reduce_damage", "divide_damage"]))
         if t == "defense_reroll":
-            effects.append(DefenseEffect(type=t, count=1, mode=draw(st.sampled_from(["safe", "could_be_blank"]))))
+            effects.append(DefenseEffect(type=t, count=1, mode=draw(st.sampled_from(["safe", "gamble"]))))
         elif t == "defense_cancel":
             effects.append(DefenseEffect(type=t, count=1))
         elif t == "reduce_damage":

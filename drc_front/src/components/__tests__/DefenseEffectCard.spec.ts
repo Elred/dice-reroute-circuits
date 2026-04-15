@@ -18,10 +18,10 @@ describe('DefenseEffectCard — summary display', () => {
     expect(wrapper.find('span').text()).toBe('Reroll 2× [safe]')
   })
 
-  it('defense_reroll could_be_blank mode', () => {
+  it('defense_reroll gamble mode', () => {
     setActivePinia(createPinia())
-    const wrapper = mountCard({ type: 'defense_reroll', count: 1, mode: 'could_be_blank' })
-    expect(wrapper.find('span').text()).toBe('Reroll 1× [could_be_blank]')
+    const wrapper = mountCard({ type: 'defense_reroll', count: 1, mode: 'gamble' })
+    expect(wrapper.find('span').text()).toBe('Reroll 1× [gamble]')
   })
 
   it('defense_reroll with applicable_results shows them in braces', () => {

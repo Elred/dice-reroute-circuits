@@ -62,7 +62,7 @@ attacks:
 | `defense_cancel` | `count` | `{ type: defense_cancel, count: 1 }` — Evade: cancel N dice |
 | `defense_reroll` | `count`, `mode` | `{ type: defense_reroll, count: 1, mode: safe }` — Reroll N dice |
 
-Defense reroll modes: `safe` (no risk of blank) or `could_be_blank` (riskier, more targets).
+Defense reroll modes: `safe` (no risk of blank) or `gamble` (riskier, more targets).
 
 ## Output Format (CSV)
 

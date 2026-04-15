@@ -21,7 +21,7 @@ export interface AttackEffect {
 export interface DefenseEffect {
   type: 'defense_reroll' | 'defense_cancel' | 'reduce_damage' | 'divide_damage'
   count?: number
-  mode?: 'safe' | 'could_be_blank'
+  mode?: 'safe' | 'gamble'
   amount?: number
   applicable_results?: string[]
 }

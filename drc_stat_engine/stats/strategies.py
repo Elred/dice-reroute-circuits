@@ -137,7 +137,7 @@ DEFENSE_PRIORITY_LISTS = {
     "ship": {
         "defense_reroll": {
             "safe":           ["R_hit+hit", "B_hit+crit", "U_crit", "U_hit"],
-            "could_be_blank": ["R_hit+hit", "B_hit+crit", "R_crit", "R_hit", "U_crit", "U_hit", "B_hit"],
+            "gamble": ["R_hit+hit", "B_hit+crit", "R_crit", "R_hit", "U_crit", "U_hit", "B_hit"],
         },
         "defense_cancel": ["B_hit+crit", "R_hit+hit", "U_crit", "R_crit", "R_hit", "U_hit", "B_hit"],
     },
@@ -145,8 +145,8 @@ DEFENSE_PRIORITY_LISTS = {
         # Squad crits (R_crit, U_crit) are worthless (0 damage, 0 crit) — never reroll/cancel them.
         # B_hit+crit is only 1 damage for squad (no crit), so it's lower priority than R_hit+hit.
         "defense_reroll": {
-            "safe":           ["R_hit+hit", "R_hit", "U_hit"],
-            "could_be_blank": ["R_hit+hit", "R_hit", "U_hit", "B_hit", "B_hit+crit"],
+            "safe":           ["R_hit+hit", "B_hit+crit", "B_hit", "U_hit"],
+            "gamble": ["R_hit+hit", "R_hit", "U_hit", "B_hit", "B_hit+crit"],
         },
         "defense_cancel": ["R_hit+hit", "R_hit", "U_hit", "B_hit", "B_hit+crit"],
     },

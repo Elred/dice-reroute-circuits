@@ -33,7 +33,7 @@ errors = []
 # highest-damage faces, so post-defense avg_damage should be strictly
 # less than pre-defense avg_damage (for pools that produce damage faces).
 #
-# We test both "safe" and "could_be_blank" modes with multiple pool configs.
+# We test both "safe" and "gamble" modes with multiple pool configs.
 # ===========================================================================
 
 # --- Property 2a: Safe reroll reduces avg_damage (1R 1U pool) ---
@@ -77,7 +77,7 @@ t2b_error = None
 
 try:
     pool = DicePool(red=1, blue=1, black=0, type="ship")
-    defense = [DefenseEffect(type="defense_reroll", count=1, mode="could_be_blank")]
+    defense = [DefenseEffect(type="defense_reroll", count=1, mode="gamble")]
     variants = generate_report(
         pool, [], ["max_damage"],
         backend="combinatorial",
@@ -86,9 +86,9 @@ try:
     v = variants[0]
     pre_avg = v["pre_defense"]["avg_damage"]
     post_avg = v["post_defense"]["avg_damage"]
-    # could_be_blank targets more faces: R_hit+hit, B_hit+crit, R_crit, R_hit, U_crit, U_hit, B_hit
+    # gamble targets more faces: R_hit+hit, B_hit+crit, R_crit, R_hit, U_crit, U_hit, B_hit
     assert post_avg < pre_avg - 1e-9, (
-        f"could_be_blank reroll (1R1U): post avg_damage ({post_avg:.6f}) should be "
+        f"gamble reroll (1R1U): post avg_damage ({post_avg:.6f}) should be "
         f"strictly less than pre avg_damage ({pre_avg:.6f})"
     )
 except Exception as e:
@@ -96,15 +96,15 @@ except Exception as e:
     t2b_error = str(e)
 
 if t2b_pass:
-    print("PASS: Property 2b — could_be_blank reroll reduces avg_damage (1R 1U pool)")
+    print("PASS: Property 2b — gamble reroll reduces avg_damage (1R 1U pool)")
     passed += 1
 else:
     print(f"FAIL: Property 2b — {t2b_error}")
     failed += 1
     errors.append(("Property 2b", t2b_error))
 
-# --- Property 2c: could_be_blank reroll reduces MORE than safe reroll ---
-# could_be_blank targets more faces (including R_crit, R_hit, B_hit),
+# --- Property 2c: gamble reroll reduces MORE than safe reroll ---
+# gamble targets more faces (including R_crit, R_hit, B_hit),
 # so it should reduce avg_damage more aggressively than safe mode.
 t2c_pass = True
 t2c_error = None
@@ -112,7 +112,7 @@ t2c_error = None
 try:
     pool = DicePool(red=1, blue=1, black=0, type="ship")
     defense_safe = [DefenseEffect(type="defense_reroll", count=1, mode="safe")]
-    defense_cbb = [DefenseEffect(type="defense_reroll", count=1, mode="could_be_blank")]
+    defense_cbb = [DefenseEffect(type="defense_reroll", count=1, mode="gamble")]
 
     v_safe = generate_report(
         pool, [], ["max_damage"],
@@ -127,10 +127,10 @@ try:
 
     safe_post = v_safe["post_defense"]["avg_damage"]
     cbb_post = v_cbb["post_defense"]["avg_damage"]
-    # could_be_blank targets strictly more faces, so it should reduce damage
+    # gamble targets strictly more faces, so it should reduce damage
     # at least as much (and typically more) than safe mode
     assert cbb_post <= safe_post + 1e-9, (
-        f"could_be_blank post avg ({cbb_post:.6f}) should be <= "
+        f"gamble post avg ({cbb_post:.6f}) should be <= "
         f"safe post avg ({safe_post:.6f})"
     )
 except Exception as e:
@@ -138,7 +138,7 @@ except Exception as e:
     t2c_error = str(e)
 
 if t2c_pass:
-    print("PASS: Property 2c — could_be_blank reroll reduces at least as much as safe reroll")
+    print("PASS: Property 2c — gamble reroll reduces at least as much as safe reroll")
     passed += 1
 else:
     print(f"FAIL: Property 2c — {t2c_error}")
@@ -183,8 +183,8 @@ t2e_error = None
 
 try:
     pool = DicePool(red=1, blue=1, black=1, type="ship")
-    defense_1 = [DefenseEffect(type="defense_reroll", count=1, mode="could_be_blank")]
-    defense_2 = [DefenseEffect(type="defense_reroll", count=2, mode="could_be_blank")]
+    defense_1 = [DefenseEffect(type="defense_reroll", count=1, mode="gamble")]
+    defense_2 = [DefenseEffect(type="defense_reroll", count=2, mode="gamble")]
 
     v1 = generate_report(
         pool, [], ["max_damage"],
@@ -340,7 +340,7 @@ t5d_error = None
 try:
     pool = DicePool(red=1, blue=1, black=0, type="ship")
     defense_cancel = [DefenseEffect(type="defense_cancel", count=1)]
-    defense_reroll = [DefenseEffect(type="defense_reroll", count=1, mode="could_be_blank")]
+    defense_reroll = [DefenseEffect(type="defense_reroll", count=1, mode="gamble")]
 
     v_cancel = generate_report(
         pool, [], ["max_damage"],
@@ -427,13 +427,13 @@ else:
     failed += 1
     errors.append(("Property 4a", t4a_error))
 
-# --- Property 4b: Defense reroll (could_be_blank) never targets accuracy faces ---
+# --- Property 4b: Defense reroll (gamble) never targets accuracy faces ---
 t4b_pass = True
 t4b_error = None
 
 try:
     pool = DicePool(red=0, blue=2, black=0, type="ship")
-    defense = [DefenseEffect(type="defense_reroll", count=2, mode="could_be_blank")]
+    defense = [DefenseEffect(type="defense_reroll", count=2, mode="gamble")]
     variants = generate_report(
         pool, [], ["max_damage"],
         backend="combinatorial",
@@ -445,7 +445,7 @@ try:
     # Same logic: rerolling damage faces can produce accuracy, so P(acc=0)
     # should decrease or stay the same.
     assert post_acc_zero <= pre_acc_zero + 1e-9, (
-        f"could_be_blank reroll: P(acc=0) increased from {pre_acc_zero:.9f} to "
+        f"gamble reroll: P(acc=0) increased from {pre_acc_zero:.9f} to "
         f"{post_acc_zero:.9f} — accuracy faces may have been targeted"
     )
 except Exception as e:
@@ -453,7 +453,7 @@ except Exception as e:
     t4b_error = str(e)
 
 if t4b_pass:
-    print("PASS: Property 4b — could_be_blank reroll does not target accuracy faces (2U pool)")
+    print("PASS: Property 4b — gamble reroll does not target accuracy faces (2U pool)")
     passed += 1
 else:
     print(f"FAIL: Property 4b — {t4b_error}")
@@ -505,7 +505,7 @@ t4d_error = None
 try:
     # Red die has R_acc, blue die has U_acc — neither should be targeted
     pool = DicePool(red=1, blue=1, black=0, type="ship")
-    defense = [DefenseEffect(type="defense_reroll", count=2, mode="could_be_blank")]
+    defense = [DefenseEffect(type="defense_reroll", count=2, mode="gamble")]
     variants = generate_report(
         pool, [], ["max_damage"],
         backend="combinatorial",
@@ -517,7 +517,7 @@ try:
     # Rerolling damage faces can produce accuracy, so P(acc=0) should
     # decrease or stay the same.
     assert post_acc_zero <= pre_acc_zero + 1e-9, (
-        f"could_be_blank reroll (1R1U): P(acc=0) increased from "
+        f"gamble reroll (1R1U): P(acc=0) increased from "
         f"{pre_acc_zero:.9f} to {post_acc_zero:.9f} — accuracy faces may have been targeted"
     )
 except Exception as e:
@@ -525,7 +525,7 @@ except Exception as e:
     t4d_error = str(e)
 
 if t4d_pass:
-    print("PASS: Property 4d — could_be_blank reroll does not target accuracy (1R 1U pool)")
+    print("PASS: Property 4d — gamble reroll does not target accuracy (1R 1U pool)")
     passed += 1
 else:
     print(f"FAIL: Property 4d — {t4d_error}")

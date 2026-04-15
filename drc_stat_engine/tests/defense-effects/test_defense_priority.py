@@ -3,7 +3,7 @@
 Feature: defense-effects, Property 3: Applicable_results filtering preserves priority ordering
 **Validates: Requirements 2.3, 3.2, 13.5**
 
-For each defense priority list (safe reroll, could_be_blank reroll, defense_cancel),
+For each defense priority list (safe reroll, gamble reroll, defense_cancel),
 generate random subsets of faces as applicable_results, build a DefenseEffect with those
 applicable_results, run build_defense_pipeline, and verify the resolved priority_list is
 exactly the subsequence of the original priority list containing only faces in
@@ -37,7 +37,7 @@ safe_subsets = st.lists(
     unique=True,
 )
 
-could_be_blank_subsets = st.lists(
+gamble_subsets = st.lists(
     st.sampled_from(COULD_BE_BLANK_PRIORITY),
     min_size=0,
     max_size=len(COULD_BE_BLANK_PRIORITY),
@@ -111,19 +111,19 @@ else:
     errors.append(("defense_reroll safe filtering", t1_error))
 
 # ---------------------------------------------------------------------------
-# Test 2: defense_reroll could_be_blank — applicable_results filtering preserves order
+# Test 2: defense_reroll gamble — applicable_results filtering preserves order
 # ---------------------------------------------------------------------------
 t2_pass = True
 t2_error = None
 
 try:
-    @given(subset=could_be_blank_subsets)
+    @given(subset=gamble_subsets)
     @settings(max_examples=100)
-    def test_could_be_blank_reroll_filtering(subset):
+    def test_gamble_reroll_filtering(subset):
         effect = DefenseEffect(
             type="defense_reroll",
             count=1,
-            mode="could_be_blank",
+            mode="gamble",
             applicable_results=subset,
         )
         result = build_defense_pipeline([effect])
@@ -135,22 +135,22 @@ try:
             expected = list(COULD_BE_BLANK_PRIORITY)
 
         assert resolved == expected, (
-            f"could_be_blank reroll: applicable_results={subset}, "
+            f"gamble reroll: applicable_results={subset}, "
             f"expected={expected}, got={resolved}"
         )
 
-    test_could_be_blank_reroll_filtering()
+    test_gamble_reroll_filtering()
 except Exception as e:
     t2_pass = False
     t2_error = str(e)
 
 if t2_pass:
-    print("PASS: defense_reroll could_be_blank — applicable_results filtering preserves priority order")
+    print("PASS: defense_reroll gamble — applicable_results filtering preserves priority order")
     passed += 1
 else:
-    print(f"FAIL: defense_reroll could_be_blank — {t2_error}")
+    print(f"FAIL: defense_reroll gamble — {t2_error}")
     failed += 1
-    errors.append(("defense_reroll could_be_blank filtering", t2_error))
+    errors.append(("defense_reroll gamble filtering", t2_error))
 
 # ---------------------------------------------------------------------------
 # Test 3: defense_cancel — applicable_results filtering preserves order
