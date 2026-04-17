@@ -39,5 +39,10 @@ export const useReportStore = defineStore('report', () => {
     error.value = null
   }
 
-  return { groups, isLoading, error, lastRequest, runReport, clearAll }
+  function removeGroup(id: number) {
+    groups.value = groups.value.filter(g => g.id !== id)
+  }
+
+
+  return { groups, isLoading, error, lastRequest, runReport, clearAll, removeGroup }
 })

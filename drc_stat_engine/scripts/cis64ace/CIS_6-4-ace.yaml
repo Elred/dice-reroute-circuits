@@ -1,0 +1,105 @@
+# CIS 6-4 VS PDIC
+
+# Squadrons:
+# • DIS-T81 - Droid Tri-Fighter Squadron (17)
+# • Wat Tambor - Belbullab-22 Starfighter Squadron (18)
+# • 4 x Hyena-class Droid Bomber Squadron (44)
+# • 6 x Vulture-class Droid Fighter Squadron (48)
+# = 127 Points
+
+name: "CIS 6-4 VS PDIC"
+
+column_labels:
+  label: "Label"
+  pre_avg: "Average Damage"
+  post_avg: "Average after PDIC"
+  diff_avg: "Average Saved"
+  threshold: "Damage"
+  cumul_pre: "Cumulated Damage"
+  cumul_post: "Cumulated after PDIC"
+  cumul_saved: "Cumulated Saved Damage"
+
+attacks:
+  - label: "DIS-T81"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Wat Tambor"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Hyena #1"
+    pool: { red: 2, blue: 0, black: 0, type: ship }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+  
+  - label: "Hyena #2"
+    pool: { red: 2, blue: 0, black: 0, type: ship }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Hyena #3"
+    pool: { red: 2, blue: 0, black: 0, type: ship }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Hyena #4"
+    pool: { red: 2, blue: 0, black: 0, type: ship }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Vulture #1"
+    pool: { red: 1, blue: 0, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: gamble }
+
+  - label: "Vulture #2"
+    pool: { red: 1, blue: 0, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: gamble }
+
+  - label: "Vulture #3"
+    pool: { red: 1, blue: 0, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: gamble }
+
+  - label: "Vulture #4"
+    pool: { red: 1, blue: 0, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: gamble }
+
+  - label: "Vulture #5"
+    pool: { red: 1, blue: 0, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: gamble }
+
+  - label: "Vulture #6"
+    pool: { red: 1, blue: 0, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: gamble }

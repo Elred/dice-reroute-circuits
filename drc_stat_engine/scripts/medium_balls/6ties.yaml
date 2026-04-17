@@ -1,0 +1,60 @@
+# 6 TIEs
+
+# Squadrons:
+# • 6 x TIE Fighter Squadron (48)
+# = 48 Points
+
+name: "6 TIEs"
+
+column_labels:
+  label: "Label"
+  pre_avg: "Average Damage"
+  post_avg: "Average after PDIC"
+  diff_avg: "Average Saved"
+  threshold: "Damage"
+  cumul_pre: "Cumulated Damage"
+  cumul_post: "Cumulated after PDIC"
+  cumul_saved: "Cumulated Saved Damage"
+
+attacks:
+  - label: "TIE Fighter #1"
+    pool: { red: 0, blue: 1, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "TIE Fighter #2"
+    pool: { red: 0, blue: 1, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "TIE Fighter #3"
+    pool: { red: 0, blue: 1, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "TIE Fighter #4"
+    pool: { red: 0, blue: 1, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "TIE Fighter #5"
+    pool: { red: 0, blue: 1, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "TIE Fighter #6"
+    pool: { red: 0, blue: 1, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }

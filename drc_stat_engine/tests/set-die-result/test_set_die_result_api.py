@@ -52,7 +52,7 @@ class TestSetDieAPI(unittest.TestCase):
         r = post_report(self.client, {
             "dice_pool": BASE_POOL,
             "pipeline": [{
-                "type": "set_die",
+                "type": "change_die",
                 "applicable_results": ["R_blank"],
                 # target_result intentionally omitted
             }],
@@ -66,21 +66,21 @@ class TestSetDieAPI(unittest.TestCase):
     # -----------------------------------------------------------------------
     # Test 3: /meta includes "set_die" in attack_effect_types
     # -----------------------------------------------------------------------
-    def test_meta_includes_set_die(self):
+    def test_meta_includes_change_die(self):
         r = self.client.get("/api/v1/meta")
         self.assertEqual(r.status_code, 200)
         data = r.get_json()
         self.assertIn("attack_effect_types", data)
-        self.assertIn("set_die", data["attack_effect_types"])
+        self.assertIn("change_die", data["attack_effect_types"])
 
     # -----------------------------------------------------------------------
     # Test 4: set_die with color-agnostic target_result works
     # -----------------------------------------------------------------------
-    def test_set_die_color_agnostic_target(self):
+    def test_change_die_color_agnostic_target(self):
         r = post_report(self.client, {
             "dice_pool": BASE_POOL,
             "pipeline": [{
-                "type": "set_die",
+                "type": "change_die",
                 "applicable_results": ["R_blank", "B_blank"],
                 "target_result": "hit",  # color-agnostic
             }],
@@ -91,11 +91,11 @@ class TestSetDieAPI(unittest.TestCase):
     # -----------------------------------------------------------------------
     # Test 5: set_die with empty applicable_results is a no-op (valid request)
     # -----------------------------------------------------------------------
-    def test_set_die_empty_applicable_results(self):
+    def test_change_die_empty_applicable_results(self):
         r = post_report(self.client, {
             "dice_pool": BASE_POOL,
             "pipeline": [{
-                "type": "set_die",
+                "type": "change_die",
                 "applicable_results": [],
                 "target_result": "R_hit",
             }],

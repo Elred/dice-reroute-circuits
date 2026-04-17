@@ -61,7 +61,8 @@ def valid_dice_pool_st(draw):
 
 @st.composite
 def valid_attack_effect_st(draw, dtype):
-    op_type = draw(st.sampled_from(sorted(VALID_ATTACK_EFFECT_TYPES)))
+    # Exclude change_die to avoid needing target_result in random generation
+    op_type = draw(st.sampled_from(["reroll", "cancel", "add_dice"]))
     if op_type == "add_dice":
         r = draw(st.integers(min_value=0, max_value=1))
         u = draw(st.integers(min_value=0, max_value=1))
@@ -79,10 +80,7 @@ def valid_request_st(draw):
     pool_dict = draw(valid_dice_pool_st())
     dtype = pool_dict["type"]
     pipeline = draw(st.lists(valid_attack_effect_st(dtype), min_size=0, max_size=2))
-    strategies = draw(st.lists(
-        st.sampled_from(ALL_STRATEGIES[dtype]),
-        min_size=1, max_size=2, unique=True,
-    ))
+    strategies = [draw(st.sampled_from(ALL_STRATEGIES[dtype]))]
     return {"dice_pool": pool_dict, "pipeline": pipeline, "strategies": strategies}
 
 

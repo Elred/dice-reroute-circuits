@@ -14,8 +14,8 @@ from drc_stat_engine.stats.strategies import (
 )
 from drc_stat_engine.stats.report_engine import generate_report
 
-SHIP_STRATEGIES = ("max_damage", "max_doubles", "max_accuracy", "max_crits")
-SQUAD_STRATEGIES = ("max_damage", "max_accuracy", "max_crits")
+SHIP_STRATEGIES = ("max_damage", "balanced", "black_doubles", "max_accuracy_blue")
+SQUAD_STRATEGIES = ("max_damage", "balanced", "max_accuracy_blue")
 
 
 # ---------------------------------------------------------------------------
@@ -59,57 +59,44 @@ class TestStrategyPriorityLists(unittest.TestCase):
         self.assertNotIn("R_hit+hit", pl)
         self.assertNotIn("B_hit+crit", pl)
 
-    # ship max_doubles ordering
-    def test_ship_max_doubles_blank_before_hit(self):
-        pl = STRATEGY_PRIORITY_LISTS["ship"]["max_doubles"]["reroll"]
-        self.assertLess(pl.index("R_blank"), pl.index("R_hit"))
-        self.assertLess(pl.index("U_acc"), pl.index("R_hit"))
+    # ship black_doubles ordering
+    def test_ship_black_doubles_blank_before_hit(self):
+        pl = STRATEGY_PRIORITY_LISTS["ship"]["black_doubles"]["reroll"]
+        self.assertLess(pl.index("R_blank"), pl.index("B_hit"))
+        self.assertLess(pl.index("B_blank"), pl.index("B_hit"))
 
-    def test_ship_max_doubles_hit_before_crit(self):
-        pl = STRATEGY_PRIORITY_LISTS["ship"]["max_doubles"]["reroll"]
-        self.assertLess(pl.index("R_hit"), pl.index("R_crit"))
+    def test_ship_black_doubles_b_hit_in_list(self):
+        pl = STRATEGY_PRIORITY_LISTS["ship"]["black_doubles"]["reroll"]
+        self.assertIn("B_hit", pl)
 
-    def test_ship_max_doubles_doubles_not_in_list(self):
-        pl = STRATEGY_PRIORITY_LISTS["ship"]["max_doubles"]["reroll"]
+    def test_ship_black_doubles_doubles_not_in_list(self):
+        pl = STRATEGY_PRIORITY_LISTS["ship"]["black_doubles"]["reroll"]
         self.assertNotIn("R_hit+hit", pl)
         self.assertNotIn("B_hit+crit", pl)
 
-    # ship max_accuracy ordering
-    def test_ship_max_accuracy_blank_before_hit(self):
-        pl = STRATEGY_PRIORITY_LISTS["ship"]["max_accuracy"]["reroll"]
-        self.assertLess(pl.index("R_blank"), pl.index("R_hit"))
+    # ship max_accuracy_blue ordering
+    def test_ship_max_accuracy_blue_blank_before_hit(self):
+        pl = STRATEGY_PRIORITY_LISTS["ship"]["max_accuracy_blue"]["reroll"]
+        self.assertLess(pl.index("R_blank"), pl.index("U_hit"))
 
-    def test_ship_max_accuracy_blue_before_red(self):
-        pl = STRATEGY_PRIORITY_LISTS["ship"]["max_accuracy"]["reroll"]
-        self.assertLess(pl.index("U_hit"), pl.index("R_hit"))
-        self.assertLess(pl.index("U_crit"), pl.index("R_crit"))
+    def test_ship_max_accuracy_blue_blue_hit_in_list(self):
+        pl = STRATEGY_PRIORITY_LISTS["ship"]["max_accuracy_blue"]["reroll"]
+        self.assertIn("U_hit", pl)
+        self.assertIn("U_crit", pl)
 
-    def test_ship_max_accuracy_acc_not_in_list(self):
-        pl = STRATEGY_PRIORITY_LISTS["ship"]["max_accuracy"]["reroll"]
+    def test_ship_max_accuracy_blue_acc_not_in_list(self):
+        pl = STRATEGY_PRIORITY_LISTS["ship"]["max_accuracy_blue"]["reroll"]
         self.assertNotIn("R_acc", pl)
         self.assertNotIn("U_acc", pl)
 
-    def test_ship_max_accuracy_black_not_in_list(self):
-        pl = STRATEGY_PRIORITY_LISTS["ship"]["max_accuracy"]["reroll"]
-        self.assertNotIn("B_blank", pl)
-        self.assertNotIn("B_hit", pl)
-        self.assertNotIn("B_hit+crit", pl)
-
-    # ship max_crits ordering
-    def test_ship_max_crits_blank_before_hit(self):
-        pl = STRATEGY_PRIORITY_LISTS["ship"]["max_crits"]["reroll"]
-        self.assertLess(pl.index("R_blank"), pl.index("R_hit"))
-        self.assertLess(pl.index("U_acc"), pl.index("R_hit"))
-
-    def test_ship_max_crits_crits_not_in_list(self):
-        pl = STRATEGY_PRIORITY_LISTS["ship"]["max_crits"]["reroll"]
-        self.assertNotIn("R_crit", pl)
-        self.assertNotIn("U_crit", pl)
-        self.assertNotIn("R_hit+hit", pl)
-        self.assertNotIn("B_hit+crit", pl)
+    # ship balanced ordering
+    def test_ship_balanced_only_blanks(self):
+        pl = STRATEGY_PRIORITY_LISTS["ship"]["balanced"]["reroll"]
+        self.assertEqual(set(pl), {"R_blank", "B_blank"})
 
     # squad ordering
     def test_squad_crit_before_hit(self):
+        """Squad crits are worthless — should be rerolled before hits."""
         for strategy in SQUAD_STRATEGIES:
             pl = STRATEGY_PRIORITY_LISTS["squad"][strategy]["reroll"]
             if "R_crit" in pl and "R_hit" in pl:
@@ -176,13 +163,13 @@ class TestBuildStrategyPipeline(unittest.TestCase):
         self.assertEqual(set(result[0].priority_list), {"R_blank", "B_blank"})
 
     def test_strategy_order_preserved_in_filtered_list(self):
-        hits_and_blanks = [AttackEffect(type="reroll", count=1, applicable_results=["R_hit", "R_blank", "B_blank"])]
-        result = build_strategy_pipeline(hits_and_blanks, "max_doubles", "ship")
-        self.assertLess(result[0].priority_list.index("R_blank"), result[0].priority_list.index("R_hit"))
+        hits_and_blanks = [AttackEffect(type="reroll", count=1, applicable_results=["R_hit", "R_blank", "B_blank", "B_hit"])]
+        result = build_strategy_pipeline(hits_and_blanks, "black_doubles", "ship")
+        self.assertLess(result[0].priority_list.index("R_blank"), result[0].priority_list.index("B_hit"))
 
     def test_add_dice_only_pipeline_unchanged(self):
         add_only = [AttackEffect(type="add_dice", count=1, applicable_results=["B_blank"])]
-        result = build_strategy_pipeline(add_only, "max_accuracy", "ship")
+        result = build_strategy_pipeline(add_only, "max_accuracy_blue", "ship")
         self.assertEqual(result[0].applicable_results, ["B_blank"])
 
 
@@ -219,37 +206,30 @@ class TestGenerateReport(unittest.TestCase):
         self.assertEqual(variants[0]["damage"][0], (0, 1.0))
 
     def test_four_ship_strategies(self):
-        strategies = ["max_damage", "max_doubles", "max_accuracy", "max_crits"]
+        strategies = list(SHIP_STRATEGIES)
         variants = generate_report(self.pool_rb, self.prio_pipeline, strategies)
         self.assertEqual(len(variants), 4)
         self.assertEqual([v["label"] for v in variants], strategies)
 
     def test_all_variants_damage_starts_at_zero(self):
-        strategies = ["max_damage", "max_doubles", "max_accuracy", "max_crits"]
+        strategies = list(SHIP_STRATEGIES)
         variants = generate_report(self.pool_rb, self.prio_pipeline, strategies)
         for v in variants:
             self.assertEqual(v["damage"][0], (0, 1.0))
 
     def test_all_variants_crit_in_range(self):
-        strategies = ["max_damage", "max_doubles", "max_accuracy", "max_crits"]
+        strategies = list(SHIP_STRATEGIES)
         variants = generate_report(self.pool_rb, self.prio_pipeline, strategies)
         for v in variants:
             self.assertGreaterEqual(v["crit"], 0.0)
             self.assertLessEqual(v["crit"], 1.0)
 
-    def test_max_damage_ge_max_accuracy_at_threshold_1(self):
+    def test_max_damage_ge_balanced_at_threshold_1(self):
         pool = DicePool(red=2, blue=1, black=0, type="ship")
         pipeline = [AttackEffect(type="reroll", count=1,
             applicable_results=["R_blank", "R_acc", "U_acc", "R_hit", "U_hit", "U_crit"])]
-        variants = generate_report(pool, pipeline, ["max_damage", "max_accuracy"])
+        variants = generate_report(pool, pipeline, ["max_damage", "balanced"])
         self.assertGreaterEqual(variants[0]["damage"][1][1], variants[1]["damage"][1][1])
-
-    def test_max_doubles_max_damage_threshold(self):
-        pool = DicePool(red=3, blue=0, black=0, type="ship")
-        pipeline = [AttackEffect(type="reroll", count=2,
-            applicable_results=["R_blank", "R_acc", "R_hit", "R_crit"])]
-        variants = generate_report(pool, pipeline, ["max_damage", "max_doubles"])
-        self.assertGreaterEqual(variants[1]["damage"][-1][0], variants[0]["damage"][-1][0])
 
     def test_unknown_strategy_raises(self):
         with self.assertRaises(ValueError):

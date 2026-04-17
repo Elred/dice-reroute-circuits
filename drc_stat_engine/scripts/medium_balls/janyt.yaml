@@ -1,0 +1,82 @@
+# Jan YTs
+# Squadrons:
+# • Jan Ors - Moldy Crow (19)
+# • 7 x YT-2400 (112)
+# = 131 Points
+
+name: "Jan YTs"
+
+column_labels:
+  label: "Label"
+  pre_avg: "Average Damage"
+  post_avg: "Average after PDIC"
+  diff_avg: "Average Saved"
+  threshold: "Damage"
+  cumul_pre: "Cumulated Damage"
+  cumul_post: "Cumulated after PDIC"
+  cumul_saved: "Cumulated Saved Damage"
+
+attacks:
+  
+  - label: "Jan"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "YT2400 #1"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "YT2400 #2"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "YT2400 #3"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "YT2400 #3"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "YT2400 #4"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "YT2400 #5"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+    
+  - label: "YT2400 #6"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+    
+  - label: "YT2400 #7"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }

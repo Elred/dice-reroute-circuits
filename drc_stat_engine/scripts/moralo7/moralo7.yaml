@@ -1,0 +1,122 @@
+# Moralo (7 attacks)
+# Squadrons:
+# • Darth Vader - TIE Defender Squadron (25)
+# • Maarek Stele - TIE Defender Squadron (21)
+# • Moralo Eval - YV-666 (22)
+# • Black Squadron - TIE Fighter Squadron (9)
+# • TIE Advanced Squadron (12)
+# • 3 x Lambda-class Shuttle (45)
+# = 134 Points
+
+name: "Moralo (7 attacks)"
+
+column_labels:
+  label: "Label"
+  pre_avg: "Average Damage"
+  post_avg: "Average after PDIC"
+  diff_avg: "Average Saved"
+  threshold: "Damage"
+  cumul_pre: "Cumulated Damage"
+  cumul_post: "Cumulated after PDIC"
+  cumul_saved: "Cumulated Saved Damage"
+
+attacks:
+  - label: "Maarek Stele"
+    pool: { red: 0, blue: 2, black: 0, type: ship }
+    strategy: max_damage
+    attack_effects: 
+      - { type: change_die, applicable_results: [U_acc], target_result: U_crit }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+  
+  - label: "Darth Vader (TIE Defender)"
+    pool: { red: 2, blue: 0, black: 0, type: ship }
+    strategy: max_damage
+    attack_effects: 
+      - { type: reroll, count: 2, applicable_results: [R_blank, R_acc] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Moralo #1"
+    pool: { red: 0, blue: 2, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Moralo #2"
+    pool: { red: 0, blue: 2, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Moralo #3"
+    pool: { red: 0, blue: 2, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Moralo #4"
+    pool: { red: 0, blue: 2, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Moralo #5"
+    pool: { red: 0, blue: 2, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Moralo #6"
+    pool: { red: 0, blue: 2, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Moralo #7"
+    pool: { red: 0, blue: 2, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Black Squadron"
+    pool: { red: 0, blue: 1, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "TIE Advanced"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Lambda #1"
+    pool: { red: 0, blue: 1, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Lambda #2"
+    pool: { red: 0, blue: 1, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Lambda #3"
+    pool: { red: 0, blue: 1, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }

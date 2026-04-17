@@ -5,11 +5,13 @@ import { useConfigStore } from './stores/configStore'
 import { useReport } from './composables/useReport'
 import DicePoolConfig from './components/DicePoolConfig.vue'
 import AttackEffectPipeline from './components/AttackEffectPipeline.vue'
-import StrategySelector from './components/StrategySelector.vue'
 import ResultsPanel from './components/ResultsPanel.vue'
+import DefenseEffectPipeline from './components/DefenseEffectPipeline.vue'
 import AboutModal from './components/AboutModal.vue'
+import ChangelogModal from './components/ChangelogModal.vue'
 
 const showAbout = ref(false)
+const showChangelog = ref(false)
 
 const meta = useMetaStore()
 const config = useConfigStore()
@@ -27,10 +29,17 @@ const canCalculate = () => !config.isPoolEmpty && config.strategies.length > 0
     <header class="bg-[#1a1d2e] border-b border-[#d69e2e]/20 px-6 py-3 flex items-center gap-3">
       <span class="text-[#d69e2e] text-lg font-bold tracking-wide">DRC</span>
       <span class="text-[#8892a4] text-sm">Dice Reroute Circuits</span>
-      <button
-        class="ml-auto text-[#d69e2e] text-sm hover:text-[#b7791f] transition-colors"
-        @click="showAbout = true"
-      >About</button>
+      <div class="ml-auto flex items-center gap-3">
+        <button
+          class="text-[#d69e2e] text-sm hover:text-[#b7791f] transition-colors"
+          @click="showChangelog = true"
+        >Changelog</button>
+        <span class="text-[#8892a4]/30">|</span>
+        <button
+          class="text-[#d69e2e] text-sm hover:text-[#b7791f] transition-colors"
+          @click="showAbout = true"
+        >About</button>
+      </div>
     </header>
 
     <!-- Connection error banner -->
@@ -46,7 +55,7 @@ const canCalculate = () => !config.isPoolEmpty && config.strategies.length > 0
       <aside class="w-full md:w-80 lg:w-96 flex-shrink-0 space-y-3 overflow-y-auto">
         <DicePoolConfig />
         <AttackEffectPipeline />
-        <StrategySelector />
+        <DefenseEffectPipeline />
 
         <button
           @click="calculate"
@@ -65,5 +74,6 @@ const canCalculate = () => !config.isPoolEmpty && config.strategies.length > 0
     </main>
 
     <AboutModal v-model="showAbout" />
+    <ChangelogModal v-model="showChangelog" />
   </div>
 </template>

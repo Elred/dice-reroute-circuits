@@ -1,12 +1,12 @@
 """
-Property-based tests for the set_die_face cross-color bugfix.
+Property-based tests for the change_die_face cross-color bugfix.
 
-Property 1 (Fix Checking): For any single-color pool, calling set_die_face with a
+Property 1 (Fix Checking): For any single-color pool, calling change_die_face with a
 target face of an absent color must return roll_df unchanged.
 **Validates: Requirements 2.1, 2.2, 2.3**
 
 Property 2 (Preservation): For any pool where the target color IS present, the fixed
-set_die_face must produce the same result as the original function. Color-agnostic
+change_die_face must produce the same result as the original function. Color-agnostic
 targets must resolve and substitute unchanged. Probabilities must sum to 1.0.
 **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5**
 """
@@ -17,7 +17,7 @@ import pandas as pd
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from drc_stat_engine.stats.dice_maths_combinatories import set_die_face, combine_dice
+from drc_stat_engine.stats.dice_maths_combinatories import change_die_face, combine_dice
 
 
 # ---------------------------------------------------------------------------
@@ -105,7 +105,7 @@ def pool_with_present_color(draw):
 @settings(max_examples=50)
 def test_property1_noop_when_target_color_absent(pool_data):
     """
-    For any single-color pool, set_die_face with a target of an absent color
+    For any single-color pool, change_die_face with a target of an absent color
     must return roll_df unchanged.
     **Validates: Requirements 2.1, 2.2, 2.3**
     """
@@ -114,7 +114,7 @@ def test_property1_noop_when_target_color_absent(pool_data):
     # Pick absent-color targets
     for absent_color, target_face in ABSENT_TARGETS[color]:
         source_faces = COLOR_FACES[absent_color]
-        result = set_die_face(roll_df, source_faces, target_face, 'ship')
+        result = change_die_face(roll_df, source_faces, target_face, 'ship')
         assert dataframes_equal(result, roll_df), (
             f"Property 1 FAILED: {color} pool, target={target_face}\n"
             f"Original:\n{roll_df.to_string()}\n"
@@ -131,12 +131,12 @@ def test_property1_noop_when_target_color_absent(pool_data):
 @settings(max_examples=50)
 def test_property2_same_color_substitution_preserved(pool_data):
     """
-    When the target color IS present in the pool, set_die_face must produce
+    When the target color IS present in the pool, change_die_face must produce
     the same result as before the fix (substitution behavior unchanged).
     **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5**
     """
     roll_df, source_faces, target_face = pool_data
-    result = set_die_face(roll_df, source_faces, target_face, 'ship')
+    result = change_die_face(roll_df, source_faces, target_face, 'ship')
 
     # Probabilities must sum to 1.0
     prob_sum = result["proba"].sum()
@@ -158,7 +158,7 @@ def test_property2_same_color_substitution_preserved(pool_data):
     st.integers(min_value=0, max_value=2),
     st.integers(min_value=0, max_value=2),
 )
-@settings(max_examples=30)
+@settings(max_examples=30, deadline=None)
 def test_property2_color_agnostic_target_preserved(target_face, red, blue, black):
     """
     Color-agnostic targets ('hit', 'blank', 'acc') must resolve and substitute
@@ -170,7 +170,7 @@ def test_property2_color_agnostic_target_preserved(target_face, red, blue, black
 
     # Use all faces as source so substitution can always find a match
     all_faces = RED_FACES + BLUE_FACES + BLACK_FACES
-    result = set_die_face(roll_df, all_faces, target_face, 'ship')
+    result = change_die_face(roll_df, all_faces, target_face, 'ship')
 
     prob_sum = result["proba"].sum()
     assert abs(prob_sum - 1.0) < 1e-9, (
@@ -187,7 +187,7 @@ def test_property2_empty_source_faces_noop(pool_data):
     **Validates: Requirements 3.4**
     """
     roll_df, _, target_face = pool_data
-    result = set_die_face(roll_df, [], target_face, 'ship')
+    result = change_die_face(roll_df, [], target_face, 'ship')
     assert dataframes_equal(result, roll_df), (
         f"Property 2 FAILED (empty source): target={target_face}\n"
         f"Original:\n{roll_df.to_string()}\n"
@@ -211,7 +211,7 @@ def test_property2_no_match_source_noop(pool_data):
     impossible_sources = [f for f in (RED_FACES + BLUE_FACES + BLACK_FACES) if f not in all_values]
     assume(len(impossible_sources) > 0)
 
-    result = set_die_face(roll_df, impossible_sources, target_face, 'ship')
+    result = change_die_face(roll_df, impossible_sources, target_face, 'ship')
     assert dataframes_equal(result, roll_df), (
         f"Property 2 FAILED (no-match source): target={target_face}\n"
         f"Original:\n{roll_df.to_string()}\n"

@@ -1,0 +1,79 @@
+# Ackbar 120pts
+# Squadrons:
+# • Jan Ors - Moldy Crow (19)
+# • Lando Calrissian - Millennium Falcon (24)
+# • Shara Bey - A-wing Squadron (17)
+# • Tycho Celchu - A-wing Squadron (16)
+# • 2 x YT-2400 (32)
+# • A-wing Squadron (11)
+# = 119 Points
+
+name: "Ackbar 120pts"
+
+column_labels:
+  label: "Label"
+  pre_avg: "Average Damage"
+  post_avg: "Average after PDIC"
+  diff_avg: "Average Saved"
+  threshold: "Damage"
+  cumul_pre: "Cumulated Damage"
+  cumul_post: "Cumulated after PDIC"
+  cumul_saved: "Cumulated Saved Damage"
+
+attacks:
+  
+  - label: "Jan"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Lando Blue"
+    pool: { red: 0, blue: 1, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: gamble }
+  
+  - label: "Lando Red (ability)"
+    pool: { red: 1, blue: 0, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects:
+      - { type: change_die, applicable_results: [R_blank, R_acc, R_hit, R_crit], target_result: R_hit+hit }
+    defense_effects: []
+
+  - label: "Shara Bey"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Tycho Celchu"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "A-Wing"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "YT-2400 #1"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "YT-2400 #2"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }

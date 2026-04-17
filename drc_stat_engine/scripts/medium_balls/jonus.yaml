@@ -1,0 +1,50 @@
+# Jonus Delivery System
+# Squadrons:
+# • Captain Jonus - TIE Bomber Squadron (16)
+# • Tel Trevura - JumpMaster 5000 (17)
+# • Tempest Squadron - TIE Advanced Squadron (13)
+# • Zertik Strom - TIE Advanced Squadron (15)
+# = 61 Points
+
+Total Points: 61
+
+name: "Jonus Delivery System"
+
+column_labels:
+  label: "Label"
+  pre_avg: "Average Damage"
+  post_avg: "Average after PDIC"
+  diff_avg: "Average Saved"
+  threshold: "Damage"
+  cumul_pre: "Cumulated Damage"
+  cumul_post: "Cumulated after PDIC"
+  cumul_saved: "Cumulated Saved Damage"
+
+attacks:
+  - label: "Jonus"
+    pool: { red: 0, blue: 0, black: 1, type: ship }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Tel Trevura"
+    pool: { red: 0, blue: 1, black: 0, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Zertik"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Tempest Squadron"
+    pool: { red: 0, blue: 0, black: 1, type: ship }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }

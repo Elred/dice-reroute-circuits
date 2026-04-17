@@ -1,0 +1,84 @@
+# Biggs ball vs PDIC. reroll gamble red bomber, reroll safe rest.
+
+# Squadrons:
+# • Biggs Darklighter - X-wing Squadron (19)
+# • Gold Squadron - Y-Wing Squadron (12)
+# • Hera Syndulla - X-wing Squadron (23)
+# • Jan Ors - Moldy Crow (19)
+# • Wedge Antilles - X-wing Squadron (19)
+# • 3 x X-wing Squadron (39)
+# = 131 Points
+
+name: "Biggs ball vs PDIC. reroll gamble red bomber, reroll safe rest."
+
+column_labels:
+  label: "Label"
+  pre_avg: "Average Damage"
+  post_avg: "Average after PDIC"
+  diff_avg: "Average Saved"
+  threshold: "Damage"
+  cumul_pre: "Cumulated Damage"
+  cumul_post: "Cumulated after PDIC"
+  cumul_saved: "Cumulated Saved Damage"
+
+attacks:
+  - label: "Biggs"
+    pool: { red: 1, blue: 0, black: 0, type: ship }
+    strategy: max_damage
+    attack_effects:
+      - { type: reroll, count: 1, applicable_results: [R_blank, R_acc] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: gamble }
+
+  - label: "Gold"
+    pool: { red: 0, blue: 2, black: 0, type: ship }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Hera"
+    pool: { red: 0, blue: 0, black: 1, type: ship }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+  
+  - label: "Jan"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects: []
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Wedge"
+    pool: { red: 0, blue: 0, black: 1, type: ship }
+    strategy: max_damage
+    attack_effects: 
+      - { type: reroll, count: 1, applicable_results: [B_blank] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "X-Wing #1"
+    pool: { red: 1, blue: 0, black: 0, type: ship }
+    strategy: max_damage
+    attack_effects:
+      - { type: reroll, count: 1, applicable_results: [R_blank, R_acc] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: gamble }
+
+  - label: "X-Wing #2"
+    pool: { red: 1, blue: 0, black: 0, type: ship }
+    strategy: max_damage
+    attack_effects:
+      - { type: reroll, count: 1, applicable_results: [R_blank, R_acc] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: gamble }
+
+  - label: "X-Wing #3"
+    pool: { red: 1, blue: 0, black: 0, type: ship }
+    strategy: max_damage
+    attack_effects:
+      - { type: reroll, count: 1, applicable_results: [R_blank, R_acc] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: gamble }

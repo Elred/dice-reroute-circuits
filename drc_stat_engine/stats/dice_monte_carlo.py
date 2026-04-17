@@ -26,8 +26,12 @@ from drc_stat_engine.stats.profiles import (
     blue_die_ship, blue_die_squad,
     red_die_ship, red_die_squad,
 )
-from drc_stat_engine.stats.dice_models import validate_dice_pool, DicePool
+from drc_stat_engine.stats.dice_models import validate_dice_pool, DicePool, evaluate_face_condition, select_color_from_pool, COLOR_PREFIXES
 from drc_stat_engine.stats.dice_maths_combinatories import _resolve_color_agnostic_result
+
+# Sentinel face index used to mark "no die added" for non-matching trials
+# in conditional add operations.
+SENTINEL = -1
 
 
 # ---------------------------------------------------------------------------
@@ -73,10 +77,15 @@ def _samples_to_roll_df(matrix, die_profiles, type_str, N):
     """
     Convert a (N, D) sample matrix of face indices into a Roll_DataFrame.
 
+    Supports sentinel values: any cell with value ``SENTINEL`` (-1) is
+    treated as "no die present for this trial" and is excluded from both
+    the value string and the stat totals.
+
     Parameters
     ----------
     matrix : np.ndarray, shape (N, D), dtype int16
         Each cell is a face index into the corresponding die's profile.
+        A value of SENTINEL (-1) means the die slot is absent for that trial.
     die_profiles : list[dict]
         Length D. Each element is a ProfileArrays dict (from _build_profile_arrays).
     type_str : str
@@ -90,21 +99,38 @@ def _samples_to_roll_df(matrix, die_profiles, type_str, N):
     """
     D = matrix.shape[1]
 
+    # Check whether any sentinel values exist — fast path avoids overhead
+    has_sentinels = np.any(matrix == SENTINEL)
+
     # --- Decode face indices to value strings ---
     # Build a (N, D) object array of face value strings.
     str_matrix = np.empty((N, D), dtype=object)
     for d in range(D):
         face_values = np.array(die_profiles[d]["values"], dtype=object)
-        str_matrix[:, d] = face_values[matrix[:, d]]
+        col = matrix[:, d]
+        if has_sentinels:
+            # For sentinel rows, temporarily use index 0 to avoid out-of-bounds,
+            # then overwrite with empty string.
+            safe_col = np.where(col == SENTINEL, 0, col)
+            str_matrix[:, d] = face_values[safe_col]
+            str_matrix[col == SENTINEL, d] = ""
+        else:
+            str_matrix[:, d] = face_values[col]
 
     # Sort each row lexicographically so value strings are canonical.
     str_matrix.sort(axis=1)
 
-    # Join each row into a space-separated string.
-    value_strings = np.array(
-        [" ".join(row) for row in str_matrix],
-        dtype=object,
-    )
+    # Join each row into a space-separated string, filtering out empty strings.
+    if has_sentinels:
+        value_strings = np.array(
+            [" ".join(tok for tok in row if tok) for row in str_matrix],
+            dtype=object,
+        )
+    else:
+        value_strings = np.array(
+            [" ".join(row) for row in str_matrix],
+            dtype=object,
+        )
 
     # --- Compute per-row stat totals ---
     damage_total = np.zeros(N, dtype=np.int32)
@@ -113,11 +139,19 @@ def _samples_to_roll_df(matrix, die_profiles, type_str, N):
     blank_total  = np.zeros(N, dtype=np.int32)
 
     for d in range(D):
-        face_indices = matrix[:, d]
-        damage_total += die_profiles[d]["damage"][face_indices].astype(np.int32)
-        crit_total   += die_profiles[d]["crit"][face_indices].astype(np.int32)
-        acc_total    += die_profiles[d]["acc"][face_indices].astype(np.int32)
-        blank_total  += die_profiles[d]["blank"][face_indices].astype(np.int32)
+        col = matrix[:, d]
+        if has_sentinels:
+            active = col != SENTINEL
+            safe_col = np.where(active, col, 0)
+            damage_total += np.where(active, die_profiles[d]["damage"][safe_col].astype(np.int32), 0)
+            crit_total   += np.where(active, die_profiles[d]["crit"][safe_col].astype(np.int32), 0)
+            acc_total    += np.where(active, die_profiles[d]["acc"][safe_col].astype(np.int32), 0)
+            blank_total  += np.where(active, die_profiles[d]["blank"][safe_col].astype(np.int32), 0)
+        else:
+            damage_total += die_profiles[d]["damage"][col].astype(np.int32)
+            crit_total   += die_profiles[d]["crit"][col].astype(np.int32)
+            acc_total    += die_profiles[d]["acc"][col].astype(np.int32)
+            blank_total  += die_profiles[d]["blank"][col].astype(np.int32)
 
     # --- Group by value string ---
     unique_values, inverse_indices, counts = np.unique(
@@ -461,6 +495,350 @@ def add_dice_to_roll(roll_df, red=0, blue=0, black=0, type_str="ship"):
     return result_df
 
 
+def add_set_die_to_roll(roll_df, target_result, type_str="ship"):
+    """
+    Add a deterministic die locked to *target_result* to every trial.
+
+    Unlike add_dice_to_roll (which samples random faces), the added die
+    always shows the specified face — no new randomness is introduced.
+
+    1. Extract _mc_state.
+    2. Determine die color from target_result prefix, select corresponding profile.
+    3. Find face index of target_result in that profile.
+    4. Create new column of shape (N, 1) filled with that face index.
+    5. Append to sample matrix, extend profiles list.
+    6. Rebuild Roll_DataFrame via _samples_to_roll_df.
+    7. Attach updated _mc_state.
+    """
+    state = roll_df.attrs["_mc_state"]
+    matrix   = state["matrix"]
+    profiles = state["profiles"]
+    N        = state["N"]
+    rng      = state["rng"]
+
+    # Determine die color from target_result prefix (R→red, U→blue, B→black)
+    prefix_to_color = {"R": "red", "U": "blue", "B": "black"}
+    target_prefix = target_result.split("_")[0]
+    color = prefix_to_color[target_prefix]
+
+    # Select the corresponding profile based on color and type
+    if type_str == "ship":
+        profile_map = {"red": red_die_ship, "blue": blue_die_ship, "black": black_die_ship}
+    else:
+        profile_map = {"red": red_die_squad, "blue": blue_die_squad, "black": black_die_squad}
+    raw_profile = profile_map[color]
+
+    # Build ProfileArrays for the new die slot
+    new_profile = _build_profile_arrays(raw_profile)
+
+    # Find face index of target_result in that profile
+    face_index = new_profile["values"].index(target_result)
+
+    # Create new column of shape (N, 1) filled with that face index
+    new_col = np.full((N, 1), face_index, dtype=np.int16)
+
+    # Append to sample matrix, extend profiles list
+    new_matrix   = np.hstack([matrix, new_col])
+    new_profiles = profiles + [new_profile]
+
+    # Rebuild Roll_DataFrame via _samples_to_roll_df
+    result_df = _samples_to_roll_df(new_matrix, new_profiles, type_str, N)
+
+    # Attach updated _mc_state
+    result_df.attrs["_mc_state"] = {
+        "matrix":   new_matrix,
+        "profiles": new_profiles,
+        "N":        N,
+        "rng":      rng,
+    }
+    return result_df
+
+
+def _evaluate_face_condition_per_trial(matrix, profiles, face_condition):
+    """
+    Return a boolean array of shape (N,) indicating which trials contain
+    the *face_condition* token in their roll outcome.
+
+    Parameters
+    ----------
+    matrix : np.ndarray, shape (N, D), dtype int16
+        Sample matrix of face indices.
+    profiles : list[dict]
+        Die profile arrays, one per column.
+    face_condition : str
+        Face token to search for (e.g. ``"R_acc"``).
+
+    Returns
+    -------
+    np.ndarray, shape (N,), dtype bool
+    """
+    N, D = matrix.shape
+    match = np.zeros(N, dtype=bool)
+    for d in range(D):
+        col = matrix[:, d]
+        # Skip sentinel columns
+        active = col != SENTINEL
+        if not active.any():
+            continue
+        face_values = np.array(profiles[d]["values"], dtype=object)
+        safe_col = np.where(active, col, 0)
+        strs = face_values[safe_col]
+        match |= active & (strs == face_condition)
+    return match
+
+
+def conditional_add_dice_mc(roll_df, face_condition, red=0, blue=0, black=0, type_str="ship"):
+    """
+    Conditionally add randomly-rolled dice only to trials where *face_condition*
+    is present.
+
+    For matching trials the new die columns are sampled normally.
+    For non-matching trials the new columns are filled with SENTINEL (-1),
+    which ``_samples_to_roll_df`` skips when building value strings and stats.
+
+    Parameters
+    ----------
+    roll_df : pd.DataFrame
+        Roll_DataFrame with ``_mc_state`` attached.
+    face_condition : str
+        Face token that must be present for the die to be added.
+    red, blue, black : int
+        Number of dice of each color to add.
+    type_str : str
+        ``"ship"`` or ``"squad"``.
+
+    Returns
+    -------
+    pd.DataFrame
+        Updated Roll_DataFrame with ``_mc_state``.
+    """
+    if red == 0 and blue == 0 and black == 0:
+        return roll_df
+
+    state = roll_df.attrs["_mc_state"]
+    matrix   = state["matrix"]
+    profiles = state["profiles"]
+    N        = state["N"]
+    rng      = state["rng"]
+
+    # Evaluate face condition per trial
+    match_mask = _evaluate_face_condition_per_trial(matrix, profiles, face_condition)
+
+    # Select profiles for new dice
+    if type_str == "ship":
+        red_profile   = red_die_ship
+        blue_profile  = blue_die_ship
+        black_profile = black_die_ship
+    else:
+        red_profile   = red_die_squad
+        blue_profile  = blue_die_squad
+        black_profile = black_die_squad
+
+    new_die_profiles = []
+    for _ in range(red):
+        new_die_profiles.append(_build_profile_arrays(red_profile))
+    for _ in range(blue):
+        new_die_profiles.append(_build_profile_arrays(blue_profile))
+    for _ in range(black):
+        new_die_profiles.append(_build_profile_arrays(black_profile))
+
+    new_D = red + blue + black
+    # Start with sentinel everywhere
+    new_cols = np.full((N, new_D), SENTINEL, dtype=np.int16)
+
+    matching_rows = np.where(match_mask)[0]
+    if len(matching_rows) > 0:
+        for i, pa in enumerate(new_die_profiles):
+            n_faces = len(pa["weights"])
+            new_cols[matching_rows, i] = rng.choice(
+                n_faces, size=len(matching_rows), p=pa["weights"]
+            )
+
+    new_matrix   = np.hstack([matrix, new_cols])
+    new_profiles = profiles + new_die_profiles
+
+    result_df = _samples_to_roll_df(new_matrix, new_profiles, type_str, N)
+    result_df.attrs["_mc_state"] = {
+        "matrix":   new_matrix,
+        "profiles": new_profiles,
+        "N":        N,
+        "rng":      rng,
+    }
+    return result_df
+
+
+def conditional_add_set_die_mc(roll_df, face_condition, target_result, type_str="ship"):
+    """
+    Conditionally add a deterministic die only to trials where *face_condition*
+    is present.
+
+    For matching trials the new column is set to the face index of
+    *target_result*.  For non-matching trials the column is SENTINEL (-1).
+
+    Parameters
+    ----------
+    roll_df : pd.DataFrame
+        Roll_DataFrame with ``_mc_state`` attached.
+    face_condition : str
+        Face token that must be present for the die to be added.
+    target_result : str
+        The face to lock the new die to (e.g. ``"R_hit"``).
+    type_str : str
+        ``"ship"`` or ``"squad"``.
+
+    Returns
+    -------
+    pd.DataFrame
+        Updated Roll_DataFrame with ``_mc_state``.
+    """
+    state = roll_df.attrs["_mc_state"]
+    matrix   = state["matrix"]
+    profiles = state["profiles"]
+    N        = state["N"]
+    rng      = state["rng"]
+
+    # Evaluate face condition per trial
+    match_mask = _evaluate_face_condition_per_trial(matrix, profiles, face_condition)
+
+    # Determine die color from target_result prefix
+    prefix_to_color = {"R": "red", "U": "blue", "B": "black"}
+    target_prefix = target_result.split("_")[0]
+    color = prefix_to_color[target_prefix]
+
+    if type_str == "ship":
+        profile_map = {"red": red_die_ship, "blue": blue_die_ship, "black": black_die_ship}
+    else:
+        profile_map = {"red": red_die_squad, "blue": blue_die_squad, "black": black_die_squad}
+    raw_profile = profile_map[color]
+
+    new_profile = _build_profile_arrays(raw_profile)
+    face_index = new_profile["values"].index(target_result)
+
+    # Start with sentinel everywhere, set face index for matching trials
+    new_col = np.full((N, 1), SENTINEL, dtype=np.int16)
+    new_col[match_mask, 0] = face_index
+
+    new_matrix   = np.hstack([matrix, new_col])
+    new_profiles = profiles + [new_profile]
+
+    result_df = _samples_to_roll_df(new_matrix, new_profiles, type_str, N)
+    result_df.attrs["_mc_state"] = {
+        "matrix":   new_matrix,
+        "profiles": new_profiles,
+        "N":        N,
+        "rng":      rng,
+    }
+    return result_df
+
+
+def color_in_pool_add_mc(roll_df, color_priority, type_str="ship"):
+    """
+    Dynamically add one die per trial whose color is determined by the
+    trial's Roll_State_Tokens and *color_priority*.
+
+    Uses three new columns (one per color: red, blue, black).  For each
+    trial only the selected color's column gets a sampled face index; the
+    other two are filled with SENTINEL (-1), which ``_samples_to_roll_df``
+    already skips.
+
+    Parameters
+    ----------
+    roll_df : pd.DataFrame
+        Roll_DataFrame with ``_mc_state`` attached.
+    color_priority : list[str]
+        A permutation of ``["red", "blue", "black"]``.
+    type_str : str
+        ``"ship"`` or ``"squad"``.
+
+    Returns
+    -------
+    pd.DataFrame
+        Updated Roll_DataFrame with ``_mc_state``.
+    """
+    state = roll_df.attrs["_mc_state"]
+    matrix   = state["matrix"]
+    profiles = state["profiles"]
+    N        = state["N"]
+    rng      = state["rng"]
+    D        = matrix.shape[1]
+
+    # Select raw profiles for each color
+    if type_str == "ship":
+        color_profiles_raw = {
+            "red": red_die_ship, "blue": blue_die_ship, "black": black_die_ship,
+        }
+    else:
+        color_profiles_raw = {
+            "red": red_die_squad, "blue": blue_die_squad, "black": black_die_squad,
+        }
+
+    # Build ProfileArrays for each color
+    color_profile_arrays = {
+        color: _build_profile_arrays(color_profiles_raw[color])
+        for color in ("red", "blue", "black")
+    }
+
+    # Determine the value string for each trial to call select_color_from_pool
+    # Build value strings from the current matrix (same logic as _samples_to_roll_df)
+    has_sentinels = np.any(matrix == SENTINEL)
+    str_matrix = np.empty((N, D), dtype=object)
+    for d in range(D):
+        face_values = np.array(profiles[d]["values"], dtype=object)
+        col = matrix[:, d]
+        if has_sentinels:
+            safe_col = np.where(col == SENTINEL, 0, col)
+            str_matrix[:, d] = face_values[safe_col]
+            str_matrix[col == SENTINEL, d] = ""
+        else:
+            str_matrix[:, d] = face_values[col]
+
+    # Build per-trial value strings
+    if has_sentinels:
+        value_strings = [
+            " ".join(sorted(tok for tok in row if tok)) for row in str_matrix
+        ]
+    else:
+        value_strings = [
+            " ".join(sorted(row)) for row in str_matrix
+        ]
+
+    # Determine selected color per trial
+    selected_colors = np.array([
+        select_color_from_pool(color_priority, vs) for vs in value_strings
+    ], dtype=object)
+
+    # Fixed column order: red, blue, black
+    column_order = ["red", "blue", "black"]
+    new_profiles = [color_profile_arrays[c] for c in column_order]
+
+    # Initialise 3 new columns with SENTINEL
+    new_cols = np.full((N, 3), SENTINEL, dtype=np.int16)
+
+    # For each color, sample faces for trials that selected that color
+    for col_idx, color in enumerate(column_order):
+        mask = selected_colors == color
+        count = mask.sum()
+        if count == 0:
+            continue
+        pa = color_profile_arrays[color]
+        n_faces = len(pa["weights"])
+        new_cols[mask, col_idx] = rng.choice(
+            n_faces, size=count, p=pa["weights"]
+        )
+
+    new_matrix = np.hstack([matrix, new_cols])
+    all_profiles = profiles + new_profiles
+
+    result_df = _samples_to_roll_df(new_matrix, all_profiles, type_str, N)
+    result_df.attrs["_mc_state"] = {
+        "matrix":   new_matrix,
+        "profiles": all_profiles,
+        "N":        N,
+        "rng":      rng,
+    }
+    return result_df
+
+
 def change_die_face(roll_df, source_results, target_result, type_str="ship"):
     """
     For each trial, replace the highest-priority source face with target_result.
@@ -506,3 +884,61 @@ def change_die_face(roll_df, source_results, target_result, type_str="ship"):
         "rng":      rng,
     }
     return result_df
+
+
+def reroll_all_dice(roll_df, condition=None, type_str="ship"):
+    """
+    Re-sample all dice for trials whose outcome satisfies *condition*.
+    Returns (result_df, initial_roll_df).
+    """
+    from drc_stat_engine.stats.dice_models import evaluate_condition
+
+    state = roll_df.attrs["_mc_state"]
+    matrix   = state["matrix"].copy()
+    profiles = state["profiles"]
+    N        = state["N"]
+    rng      = state["rng"]
+    D        = matrix.shape[1]
+
+    initial_roll_df = roll_df
+
+    # Compute per-trial stat totals
+    damage_total = np.zeros(N, dtype=np.int32)
+    crit_total   = np.zeros(N, dtype=np.int32)
+    acc_total    = np.zeros(N, dtype=np.int32)
+    blank_total  = np.zeros(N, dtype=np.int32)
+
+    for d in range(D):
+        face_indices = matrix[:, d]
+        damage_total += profiles[d]["damage"][face_indices].astype(np.int32)
+        crit_total   += profiles[d]["crit"][face_indices].astype(np.int32)
+        acc_total    += profiles[d]["acc"][face_indices].astype(np.int32)
+        blank_total  += profiles[d]["blank"][face_indices].astype(np.int32)
+
+    # Build a per-trial DataFrame to evaluate the condition
+    trial_df = pd.DataFrame({
+        "damage": damage_total,
+        "crit":   crit_total,
+        "acc":    acc_total,
+        "blank":  blank_total,
+    })
+    mask = evaluate_condition(condition, trial_df).values  # boolean array (N,)
+
+    # Re-sample all columns for matching trials
+    matching_rows = np.where(mask)[0]
+    if len(matching_rows) > 0:
+        for d in range(D):
+            n_faces = len(profiles[d]["weights"])
+            matrix[matching_rows, d] = rng.choice(
+                n_faces, size=len(matching_rows), p=profiles[d]["weights"]
+            )
+
+    result_df = _samples_to_roll_df(matrix, profiles, type_str, N)
+    result_df.attrs["_mc_state"] = {
+        "matrix":   matrix,
+        "profiles": profiles,
+        "N":        N,
+        "rng":      rng,
+    }
+
+    return (result_df, initial_roll_df)

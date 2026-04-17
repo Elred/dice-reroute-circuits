@@ -50,19 +50,27 @@ class TestReportBasic(unittest.TestCase):
         assert_variant_structure(self, data["variants"][0])
         self.assertEqual(data["variants"][0]["label"], "max_damage")
 
-    def test_multiple_strategies_returns_one_variant_each(self):
-        """5.3 — multiple strategies → one variant per strategy."""
-        strategies = ["max_damage", "max_accuracy", "max_crits"]
+    def test_single_strategy_per_request(self):
+        """5.3 — API requires exactly one strategy per request."""
+        for strategy in ["max_damage", "balanced", "max_accuracy_blue"]:
+            r = post_report(self.client, {
+                "dice_pool": BASE_POOL,
+                "pipeline": [],
+                "strategies": [strategy],
+            })
+            self.assertEqual(r.status_code, 200)
+            data = r.get_json()
+            self.assertEqual(len(data["variants"]), 1)
+            self.assertEqual(data["variants"][0]["label"], strategy)
+
+    def test_multiple_strategies_rejected(self):
+        """5.3b — API rejects requests with more than one strategy."""
         r = post_report(self.client, {
             "dice_pool": BASE_POOL,
             "pipeline": [],
-            "strategies": strategies,
+            "strategies": ["max_damage", "balanced"],
         })
-        self.assertEqual(r.status_code, 200)
-        data = r.get_json()
-        self.assertEqual(len(data["variants"]), 3)
-        labels = [v["label"] for v in data["variants"]]
-        self.assertEqual(labels, strategies)
+        self.assertEqual(r.status_code, 422)
 
     def test_empty_pipeline_matches_direct_call(self):
         """5.4 — empty pipeline returns same result as generate_report(pool, [], strategies)."""

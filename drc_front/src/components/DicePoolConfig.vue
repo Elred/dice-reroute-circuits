@@ -5,13 +5,13 @@ import { useConfigStore } from '../stores/configStore'
 const config = useConfigStore()
 
 const poolSummary = computed(() => {
-  const { red, blue, black, type } = config.pool
+  const { red, blue, black } = config.pool
   const parts = []
   if (red > 0) parts.push(`${red}R`)
   if (blue > 0) parts.push(`${blue}U`)
   if (black > 0) parts.push(`${black}B`)
   const label = parts.length ? parts.join(' ') : '0 dice'
-  return `${label} — ${type.charAt(0).toUpperCase() + type.slice(1)}`
+  return `${label} — ${config.poolLabel}`
 })
 
 const diceRows = [
@@ -19,16 +19,18 @@ const diceRows = [
   { key: 'blue' as const,  label: 'Blue',  color: 'text-[#4299e1]', dot: 'bg-[#4299e1]' },
   { key: 'black' as const, label: 'Black', color: 'text-[#718096]', dot: 'bg-[#718096]' },
 ]
+
+const TYPE_BUTTONS: [string, string][] = [['ship', 'Ship'], ['squad', 'Squadron']]
 </script>
 
 <template>
-  <div class="bg-[#1a1d2e] rounded-lg p-4 space-y-4">
+  <div class="bg-[#1a1d2e] rounded-lg p-4 space-y-4 border border-[#b7791f]">
     <h2 class="text-[#d69e2e] font-semibold text-sm uppercase tracking-wider">Dice Pool</h2>
 
-    <!-- Ship / Squad toggle -->
+    <!-- Ship / Squadron toggle -->
     <div class="flex gap-2">
       <button
-        v-for="t in ['ship', 'squad']"
+        v-for="[t, tLabel] in TYPE_BUTTONS"
         :key="t"
         @click="config.pool.type = t as 'ship' | 'squad'"
         :class="[
@@ -37,10 +39,15 @@ const diceRows = [
             ? 'bg-[#d69e2e] text-[#0f1117]'
             : 'bg-[#252840] text-[#8892a4] hover:text-[#f0f0f0]'
         ]"
-      >
-        {{ t.charAt(0).toUpperCase() + t.slice(1) }}
-      </button>
+      >{{ tLabel }}</button>
     </div>
+
+    <!-- Bomber checkbox (only when Squadron selected) -->
+    <label v-if="config.pool.type === 'squad'" class="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" v-model="config.bomber" class="accent-[#d69e2e]" />
+      <span class="text-[#f0f0f0] text-xs">Bomber</span>
+      <span class="text-[#8892a4] text-[10px]">(uses ship dice)</span>
+    </label>
 
     <!-- Dice count rows -->
     <div class="space-y-2">
