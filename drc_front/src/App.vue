@@ -29,14 +29,17 @@ const canCalculate = () => !config.isPoolEmpty && config.strategies.length > 0
     <header class="bg-[#1a1d2e] border-b border-[#d69e2e]/20 px-6 py-3 flex items-center gap-3">
       <span class="text-[#d69e2e] text-lg font-bold tracking-wide">DRC</span>
       <span class="text-[#8892a4] text-sm">Dice Reroute Circuits</span>
-      <button
-        class="ml-auto text-[#d69e2e] text-sm hover:text-[#b7791f] transition-colors"
-        @click="showChangelog = true"
-      >Changelog</button>
-      <button
-        class="text-[#d69e2e] text-sm hover:text-[#b7791f] transition-colors"
-        @click="showAbout = true"
-      >About</button>
+      <div class="ml-auto flex items-center gap-3">
+        <button
+          class="text-[#d69e2e] text-sm hover:text-[#b7791f] transition-colors"
+          @click="showChangelog = true"
+        >Changelog</button>
+        <span class="text-[#8892a4]/30">|</span>
+        <button
+          class="text-[#d69e2e] text-sm hover:text-[#b7791f] transition-colors"
+          @click="showAbout = true"
+        >About</button>
+      </div>
     </header>
 
     <!-- Connection error banner -->

@@ -2,6 +2,8 @@
 import { ref, watch } from 'vue'
 import { marked } from 'marked'
 
+const appVersion = __APP_VERSION__
+
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{ (e: 'update:modelValue', value: boolean): void }>()
 
@@ -57,7 +59,7 @@ watch(
         @click.stop
       >
         <div class="flex items-center justify-between px-6 py-4 border-b border-[#d69e2e]/20">
-          <span class="text-[#d69e2e] font-semibold tracking-wide">Changelog</span>
+          <span class="text-[#d69e2e] font-semibold tracking-wide">What's new in v{{ appVersion }}</span>
           <button
             @click="close"
             class="text-[#8892a4] hover:text-white transition-colors text-xl leading-none"
