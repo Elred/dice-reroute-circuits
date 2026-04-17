@@ -7,8 +7,14 @@ export interface DicePool {
   type: 'ship' | 'squad'
 }
 
+export interface Condition {
+  attribute: 'damage' | 'crit' | 'acc' | 'blank'
+  operator: 'lte' | 'lt' | 'gte' | 'gt' | 'eq' | 'neq'
+  threshold: number
+}
+
 export interface AttackEffect {
-  type: 'reroll' | 'cancel' | 'add_dice' | 'change_die' | 'add_set_die'
+  type: 'reroll' | 'cancel' | 'add_dice' | 'change_die' | 'add_set_die' | 'reroll_all'
   count?: number | 'any'
   applicable_results?: string[]
   dice_to_add?: { red: number; blue: number; black: number }
@@ -16,6 +22,7 @@ export interface AttackEffect {
   face_condition?: string | null
   color_in_pool?: boolean
   color_priority?: [string, string, string] | null
+  condition?: Condition | null
 }
 
 export interface DefenseEffect {

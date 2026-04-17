@@ -126,6 +126,13 @@ function buildTitle(req: import('../types/api').ReportRequest): string {
       const targetDesc = op.target_result ? humanReadableResult(op.target_result) : '?'
       return `Change Die [${sourcesDesc} > ${targetDesc}]`
     }
+    if (op.type === 'reroll_all') {
+      const c = op.condition
+      if (!c) return 'Reroll All'
+      const opSymbols: Record<string, string> = { lte: '≤', lt: '<', gte: '≥', gt: '>', eq: '=', neq: '≠' }
+      const attrNames: Record<string, string> = { damage: 'Damage', crit: 'Crit', acc: 'Acc', blank: 'Blank' }
+      return `Reroll All if ${attrNames[c.attribute] ?? c.attribute} ${opSymbols[c.operator] ?? c.operator} ${c.threshold}`
+    }
     const countStr = (op.count === 'any' || op.count == null) ? 'any' : `${op.count}`
     const resultsDesc = describeResults(op.applicable_results ?? [], p.type)
     return `${OP_LABELS[op.type] ?? op.type} ${countStr} ${resultsDesc}`
