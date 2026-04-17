@@ -1,0 +1,92 @@
+# Draven + Toryn
+
+# Squadrons:
+# • Han Solo - Millennium Falcon [ARC] (24)
+# • Fenn Rau - Mandalorian Gauntlet Fighter (24)
+# • Ketsu Onyo - Shadow Caster (22)
+# • Dutch Vander - Y-Wing Squadron (16)
+# • Gold Squadron - Y-Wing Squadron (12)
+# • 2 x A-wing Squadron (22)
+# • Lancer-class Pursuit Craft (14)
+# = 134 Points
+
+name: "Draven + Toryn"
+
+column_labels:
+  label: "Label"
+  pre_avg: "Average Damage"
+  post_avg: "Average after PDIC"
+  diff_avg: "Average Saved"
+  threshold: "Damage"
+  cumul_pre: "Cumulated Damage"
+  cumul_post: "Cumulated after PDIC"
+  cumul_saved: "Cumulated Saved Damage"
+
+attacks:
+  - label: "Han Solo"
+    pool: { red: 0, blue: 1, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects:
+      - { type: reroll, count: 1, applicable_results: [U_acc, U_crit] }
+      - { type: reroll, count: 1, applicable_results: [B_blank, U_acc, U_crit] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Fenn"
+    pool: { red: 0, blue: 1, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects:
+      - { type: reroll, count: 1, applicable_results: [U_acc, U_crit] }
+      - { type: reroll, count: 1, applicable_results: [B_blank, U_acc, U_crit] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Gold"
+    pool: { red: 0, blue: 2, black: 0, type: ship }
+    strategy: max_damage
+    attack_effects:
+      - { type: reroll, count: 1, applicable_results: [U_acc] }
+      - { type: reroll, count: 1, applicable_results: [U_acc] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Ketsu"
+    pool: { red: 0, blue: 2, black: 0, type: ship }
+    strategy: max_damage
+    attack_effects:
+      - { type: reroll, count: 1, applicable_results: [U_acc] }
+      - { type: reroll, count: 1, applicable_results: [U_acc] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+
+  - label: "Dutch"
+    pool: { red: 0, blue: 0, black: 1, type: ship }
+    strategy: max_damage
+    attack_effects: 
+      - { type: reroll, count: 1, applicable_results: [B_blank] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }  
+      
+  - label: "Lancer-class"
+    pool: { red: 0, blue: 0, black: 1, type: ship }
+    strategy: max_damage
+    attack_effects: 
+      - { type: reroll, count: 1, applicable_results: [B_blank] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+  
+  - label: "A-Wing #1"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects:
+      - { type: reroll, count: 1, applicable_results: [B_blank] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }
+  
+  - label: "A-Wing #2"
+    pool: { red: 0, blue: 0, black: 1, type: squad }
+    strategy: max_damage
+    attack_effects:
+      - { type: reroll, count: 1, applicable_results: [B_blank] }
+    defense_effects:
+      - { type: defense_reroll, count: 1, mode: safe }

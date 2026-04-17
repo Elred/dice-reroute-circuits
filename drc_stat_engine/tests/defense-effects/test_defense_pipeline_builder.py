@@ -40,13 +40,13 @@ try:
 
     # --- Constant values (squad) — crits are worthless, never rerolled/cancelled ---
     check("squad safe reroll priority (no crits)",
-          DEFENSE_PRIORITY_LISTS["squad"]["defense_reroll"]["safe"] == ["R_hit+hit", "B_hit+crit", "B_hit", "U_hit"])
+          DEFENSE_PRIORITY_LISTS["squad"]["defense_reroll"]["safe"] == ["R_hit+hit", "U_hit", "B_hit+crit", "B_hit"])
 
     check("squad gamble reroll priority (no crits)",
-          DEFENSE_PRIORITY_LISTS["squad"]["defense_reroll"]["gamble"] == ["R_hit+hit", "R_hit", "U_hit", "B_hit", "B_hit+crit"])
+          DEFENSE_PRIORITY_LISTS["squad"]["defense_reroll"]["gamble"] == ["R_hit+hit", "U_hit", "B_hit+crit", "B_hit", "R_hit"])
 
     check("squad defense_cancel priority (no crits)",
-          DEFENSE_PRIORITY_LISTS["squad"]["defense_cancel"] == ["R_hit+hit", "R_hit", "U_hit", "B_hit", "B_hit+crit"])
+          DEFENSE_PRIORITY_LISTS["squad"]["defense_cancel"] == ["R_hit+hit", "B_hit+crit", "R_hit", "U_hit", "B_hit"])
 
     # --- defense_reroll safe, no applicable_results ---
     e = DefenseEffect(type="defense_reroll", count=2, mode="safe")
