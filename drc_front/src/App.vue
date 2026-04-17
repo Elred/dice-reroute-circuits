@@ -8,8 +8,10 @@ import AttackEffectPipeline from './components/AttackEffectPipeline.vue'
 import ResultsPanel from './components/ResultsPanel.vue'
 import DefenseEffectPipeline from './components/DefenseEffectPipeline.vue'
 import AboutModal from './components/AboutModal.vue'
+import ChangelogModal from './components/ChangelogModal.vue'
 
 const showAbout = ref(false)
+const showChangelog = ref(false)
 
 const meta = useMetaStore()
 const config = useConfigStore()
@@ -29,6 +31,10 @@ const canCalculate = () => !config.isPoolEmpty && config.strategies.length > 0
       <span class="text-[#8892a4] text-sm">Dice Reroute Circuits</span>
       <button
         class="ml-auto text-[#d69e2e] text-sm hover:text-[#b7791f] transition-colors"
+        @click="showChangelog = true"
+      >Changelog</button>
+      <button
+        class="text-[#d69e2e] text-sm hover:text-[#b7791f] transition-colors"
         @click="showAbout = true"
       >About</button>
     </header>
@@ -65,5 +71,6 @@ const canCalculate = () => !config.isPoolEmpty && config.strategies.length > 0
     </main>
 
     <AboutModal v-model="showAbout" />
+    <ChangelogModal v-model="showChangelog" />
   </div>
 </template>
