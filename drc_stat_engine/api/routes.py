@@ -1,6 +1,7 @@
 import traceback
 from flask import Blueprint, request, jsonify
 from drc_stat_engine.stats.dice_models import (
+    Condition,
     DicePool, AttackEffect, DefenseEffect,
     VALID_ATTACK_EFFECT_TYPES,
     validate_dice_pool, validate_attack_effect_pipeline,
@@ -58,6 +59,16 @@ def parse_report_request(data: dict):
         color_in_pool = op.get("color_in_pool", False)
         color_priority = op.get("color_priority", None)
 
+        # Parse optional condition for reroll_all
+        condition = None
+        raw_condition = op.get("condition")
+        if raw_condition:
+            condition = Condition(
+                attribute=raw_condition["attribute"],
+                operator=raw_condition["operator"],
+                threshold=raw_condition["threshold"],
+            )
+
         pipeline.append(AttackEffect(
             type=op["type"],
             count=resolved_count,
@@ -67,6 +78,7 @@ def parse_report_request(data: dict):
             face_condition=face_condition,
             color_in_pool=color_in_pool,
             color_priority=color_priority,
+            condition=condition,
         ))
 
     strategies = data.get("strategies", ["max_damage"])

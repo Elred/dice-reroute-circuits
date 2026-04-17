@@ -9,7 +9,7 @@ const emit = defineEmits<{ close: [] }>()
 const config = useConfigStore()
 const meta = useMetaStore()
 
-const opType = ref<'reroll' | 'cancel' | 'add_dice' | 'change_die' | 'add_set_die'>('reroll')
+const opType = ref<'reroll' | 'cancel' | 'add_dice' | 'change_die' | 'add_set_die' | 'reroll_all'>('reroll')
 const countMode = ref<'any' | 'count'>('any')
 const count = ref(1)
 const selectedResults = ref<string[]>([])
@@ -21,6 +21,11 @@ const faceCondition = ref<string | null>(null)
 const showFaceCondition = ref(false)
 const colorInPool = ref(false)
 const colorPriority = ref<[string, string, string]>(['red', 'blue', 'black'])
+
+// Condition state for reroll_all
+const condAttribute = ref<'damage' | 'crit' | 'acc' | 'blank'>('damage')
+const condOperator = ref<'lte' | 'lt' | 'gte' | 'gt' | 'eq' | 'neq'>('lte')
+const condThreshold = ref(0)
 
 // Sort order: blank < acc < hit < crit < doubles (hit+hit, hit+crit)
 const FACE_ORDER = ['blank', 'acc', 'hit+crit', 'hit+hit', 'crit', 'hit']
@@ -145,6 +150,11 @@ function submit() {
     if (targetResult.value === null) return
     op = { type: 'add_set_die', target_result: targetResult.value }
     if (faceCondition.value) op.face_condition = faceCondition.value
+  } else if (opType.value === 'reroll_all') {
+    op = {
+      type: 'reroll_all',
+      condition: { attribute: condAttribute.value, operator: condOperator.value, threshold: condThreshold.value },
+    }
   } else {
     if (selectedResults.value.length === 0) return
     // count='any' is passed as-is to the API; the backend resolves it to pool size
@@ -165,6 +175,7 @@ const canSubmit = computed(() => {
   }
   if (opType.value === 'change_die') return selectedResults.value.length > 0 && targetResult.value !== null
   if (opType.value === 'add_set_die') return targetResult.value !== null && config.totalDiceCount + 1 <= 20
+  if (opType.value === 'reroll_all') return true
   return selectedResults.value.length > 0 && (countMode.value === 'any' || count.value >= 1)
 })
 </script>
@@ -176,7 +187,7 @@ const canSubmit = computed(() => {
     <!-- Op type selector -->
     <div class="flex flex-wrap gap-2">
       <button
-        v-for="[t, tLabel] in [['add_dice', 'Add'], ['add_set_die', 'Add+Set'], ['reroll', 'Reroll'], ['change_die', 'Change'], ['cancel', 'Cancel']]"
+        v-for="[t, tLabel] in [['add_dice', 'Add'], ['add_set_die', 'Add+Set'], ['reroll', 'Reroll'], ['reroll_all', 'Reroll All'], ['change_die', 'Change'], ['cancel', 'Cancel']]"
         :key="t"
         @click="opType = t as any"
         :class="[
@@ -187,7 +198,7 @@ const canSubmit = computed(() => {
     </div>
 
     <!-- reroll / cancel fields -->
-    <template v-if="opType !== 'add_dice' && opType !== 'change_die' && opType !== 'add_set_die'">
+    <template v-if="opType !== 'add_dice' && opType !== 'change_die' && opType !== 'add_set_die' && opType !== 'reroll_all'">
       <div class="flex items-center gap-4">
         <label class="flex items-center gap-1 cursor-pointer">
           <input type="radio" v-model="countMode" value="any" class="accent-[#d69e2e]" />
@@ -265,6 +276,35 @@ const canSubmit = computed(() => {
           </div>
           <p v-else class="text-[#8892a4] text-xs italic">Waiting for metadata…</p>
         </div>
+      </div>
+    </template>
+
+    <!-- reroll_all fields -->
+    <template v-else-if="opType === 'reroll_all'">
+      <div class="space-y-2">
+        <p class="text-[#8892a4] text-xs font-semibold">Reroll all dice when condition is met</p>
+        <div class="flex items-center gap-2 flex-wrap">
+          <select v-model="condAttribute" class="bg-[#1a1d2e] text-[#f0f0f0] rounded px-2 py-1 text-xs border border-[#8892a4]/30 focus:border-[#e53e3e] outline-none">
+            <option value="damage">Damage</option>
+            <option value="crit">Crit</option>
+            <option value="acc">Accuracy</option>
+            <option value="blank">Blank</option>
+          </select>
+          <select v-model="condOperator" class="bg-[#1a1d2e] text-[#f0f0f0] rounded px-2 py-1 text-xs border border-[#8892a4]/30 focus:border-[#e53e3e] outline-none">
+            <option value="lte">≤</option>
+            <option value="lt">&lt;</option>
+            <option value="gte">≥</option>
+            <option value="gt">&gt;</option>
+            <option value="eq">=</option>
+            <option value="neq">≠</option>
+          </select>
+          <input
+            v-model.number="condThreshold"
+            type="number" min="0"
+            class="w-14 bg-[#1a1d2e] text-[#f0f0f0] rounded px-2 py-1 text-xs border border-[#8892a4]/30 focus:border-[#e53e3e] outline-none"
+          />
+        </div>
+        <p class="text-[#8892a4] text-[10px] italic">Example: "Damage ≤ 3" rerolls all dice when total damage is three or less.</p>
       </div>
     </template>
 

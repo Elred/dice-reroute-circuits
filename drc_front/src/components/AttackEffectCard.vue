@@ -51,6 +51,13 @@ function opSummary(op: AttackEffect): string {
     const targetDesc = op.target_result ? humanReadableResult(op.target_result) : '?'
     return `Change Die [${sourcesDesc} > ${targetDesc}]`
   }
+  if (op.type === 'reroll_all') {
+    const c = op.condition
+    if (!c) return 'Reroll All'
+    const opLabels: Record<string, string> = { lte: '≤', lt: '<', gte: '≥', gt: '>', eq: '=', neq: '≠' }
+    const attrLabels: Record<string, string> = { damage: 'Damage', crit: 'Crit', acc: 'Accuracy', blank: 'Blank' }
+    return `Reroll All if ${attrLabels[c.attribute] ?? c.attribute} ${opLabels[c.operator] ?? c.operator} ${c.threshold}`
+  }
   const label = op.type === 'reroll' ? 'Reroll' : 'Cancel'
   const countStr = op.count === 'any' ? 'any' : `${op.count ?? 1}×`
   const results = op.applicable_results ?? []
