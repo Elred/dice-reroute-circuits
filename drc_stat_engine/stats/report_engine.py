@@ -144,13 +144,17 @@ def apply_attack_effect(roll_df, attack_effect: AttackEffect, type_str: str, bac
             cancel_count=attack_effect.count,
             type_str=type_str,
         )
-        return pd.concat([cancelled_df, kept_df]).groupby("value", as_index=False).agg({
+        merged = pd.concat([cancelled_df, kept_df]).groupby("value", as_index=False).agg({
             "proba":  "sum",
             "damage": "first",
             "crit":   "first",
             "acc":    "first",
             "blank":  "first",
         })
+        # Preserve _mc_state from kept_df (MC backend)
+        if hasattr(kept_df, 'attrs') and "_mc_state" in kept_df.attrs:
+            merged.attrs["_mc_state"] = kept_df.attrs["_mc_state"]
+        return merged
 
     elif attack_effect.type == "add_dice":
         is_mc = backend_mod is dice_monte_carlo
@@ -587,7 +591,9 @@ def generate_report(
                 f"Valid strategies: {sorted(STRATEGY_PRIORITY_LISTS[dice_pool.type])}."
             )
         strategy_pipeline = build_strategy_pipeline(pipeline, strategy, dice_pool.type)
-        final_df = run_pipeline(roll_df.copy(), strategy_pipeline, dice_pool.type, backend_mod=backend_mod)
+        roll_copy = roll_df.copy()
+        roll_copy.attrs = dict(roll_df.attrs)
+        final_df = run_pipeline(roll_copy, strategy_pipeline, dice_pool.type, backend_mod=backend_mod)
 
         # Collect the resolved priority_list from the first priority-dependent op (if any)
         priority_list = next(
@@ -597,8 +603,10 @@ def generate_report(
 
         if defense_pipeline:
             pre_defense_stats = compute_variant_stats(final_df)
+            defense_copy = final_df.copy()
+            defense_copy.attrs = dict(final_df.attrs)
             defense_df = run_defense_pipeline(
-                final_df.copy(), defense_pipeline, dice_pool.type, backend_mod=backend_mod,
+                defense_copy, defense_pipeline, dice_pool.type, backend_mod=backend_mod,
             )
             post_defense_stats = compute_variant_stats(defense_df)
 
