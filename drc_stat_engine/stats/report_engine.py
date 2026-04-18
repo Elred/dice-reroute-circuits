@@ -419,7 +419,7 @@ def sort_defense_pipeline(pipeline: List[DefenseEffect]) -> List[DefenseEffect]:
     3. divide_damage (preserving user order within group)
     Requirements: 6.1, 6.2, 6.3, 6.4
     """
-    GROUP_ORDER = {"defense_reroll": 0, "defense_cancel": 0, "reduce_damage": 1, "divide_damage": 2}
+    GROUP_ORDER = {"defense_reroll": 0, "defense_cancel": 0, "divide_damage": 1, "reduce_damage": 2}
     return sorted(pipeline, key=lambda e: GROUP_ORDER.get(e.type, 99))
 
 
@@ -507,13 +507,13 @@ def run_defense_pipeline(
                 ))
         roll_df = run_pipeline(roll_df, attack_equivalents, type_str, backend_mod=backend_mod)
 
+    # Apply divide_damage effects (halve first — better for defender)
+    for e in divide_effects:
+        roll_df = divide_damage_df(roll_df)
+
     # Apply reduce_damage effects
     for e in reduce_effects:
         roll_df = reduce_damage_df(roll_df, e.amount)
-
-    # Apply divide_damage effects
-    for e in divide_effects:
-        roll_df = divide_damage_df(roll_df)
 
     return roll_df
 
