@@ -110,8 +110,35 @@ function buildTitle(req: import('../types/api').ReportRequest): string {
   if (p.blue)  poolParts.push(`${p.blue} Blue`)
   if (p.black) poolParts.push(`${p.black} Black`)
   const poolStr = `${type} : ${poolParts.join(' ')}`
-  const opParts = pipeline.map(op => {
+
+  // Collapse consecutive color_in_pool effects with the same priority into a
+  // single counted entry. The API receives them expanded (N separate effects),
+  // but the title should show "Add 2 From Pool" not "Add From Pool, Add From Pool".
+  type CollapsedOp = import('../types/api').AttackEffect & { _collapsedCount?: number }
+  const collapsedPipeline: CollapsedOp[] = []
+  for (const op of pipeline) {
+    const prev = collapsedPipeline[collapsedPipeline.length - 1]
+    if (
+      op.type === 'add_dice' &&
+      op.color_in_pool &&
+      prev?.type === 'add_dice' &&
+      prev?.color_in_pool &&
+      JSON.stringify(op.color_priority) === JSON.stringify(prev.color_priority) &&
+      op.face_condition === prev.face_condition
+    ) {
+      prev._collapsedCount = (prev._collapsedCount ?? 1) + 1
+    } else {
+      collapsedPipeline.push({ ...op })
+    }
+  }
+
+  const opParts = collapsedPipeline.map(op => {
     if (op.type === 'add_dice') {
+      if (op.color_in_pool) {
+        // Use _collapsedCount (from expansion collapse) or the stored count field
+        const count = (op as CollapsedOp)._collapsedCount ?? (op.count && op.count !== 'any' ? (op.count as number) : 1)
+        return `Add ${count} From Pool`
+      }
       const d = op.dice_to_add ?? {}
       const added: string[] = []
       if (d.red)   added.push(`${d.red} Red`)

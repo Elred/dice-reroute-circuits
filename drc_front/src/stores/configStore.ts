@@ -33,7 +33,7 @@ export const useConfigStore = defineStore('config', () => {
       .reduce((sum, op) => sum + (op.dice_to_add!.red + op.dice_to_add!.blue + op.dice_to_add!.black), 0)
     const colorInPoolCount = pipeline.value
       .filter(op => op.type === 'add_dice' && op.color_in_pool)
-      .length
+      .reduce((sum, op) => sum + (op.count && op.count !== 'any' ? (op.count as number) : 1), 0)
     const setDice = pipeline.value
       .filter(op => op.type === 'add_set_die')
       .length

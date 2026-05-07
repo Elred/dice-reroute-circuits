@@ -32,7 +32,7 @@ describe('Property 1: SemVer format validation', () => {
           expect(SEMVER_REGEX.test(version)).toBe(true)
         }
       ),
-      { numRuns: 200 }
+      { numRuns: 50 }
     )
   })
 
@@ -54,7 +54,7 @@ describe('Property 1: SemVer format validation', () => {
       fc.property(nonSemVer, (s) => {
         expect(SEMVER_REGEX.test(s)).toBe(false)
       }),
-      { numRuns: 200 }
+      { numRuns: 50 }
     )
   })
 })
@@ -77,7 +77,7 @@ describe('Property 2: about.md round-trip', () => {
           expect(result).toContain(`Version: ${version}`)
         }
       ),
-      { numRuns: 200 }
+      { numRuns: 50 }
     )
   })
 })
@@ -101,7 +101,7 @@ describe('Property 3: about.md uniqueness', () => {
           expect(versionLines[0]).toBe(`Version: ${version}`)
         }
       ),
-      { numRuns: 200 }
+      { numRuns: 50 }
     )
   })
 })

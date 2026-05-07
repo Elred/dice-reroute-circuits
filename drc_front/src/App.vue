@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useMetaStore } from './stores/metaStore'
 import { useConfigStore } from './stores/configStore'
 import { useReport } from './composables/useReport'
+import { useUrlSync } from './composables/useUrlSync'
 import DicePoolConfig from './components/DicePoolConfig.vue'
 import AttackEffectPipeline from './components/AttackEffectPipeline.vue'
 import ResultsPanel from './components/ResultsPanel.vue'
@@ -16,8 +17,13 @@ const showChangelog = ref(false)
 const meta = useMetaStore()
 const config = useConfigStore()
 const { calculate } = useReport()
+const { restoreFromUrl, startSync } = useUrlSync()
 
-onMounted(() => meta.loadMeta())
+onMounted(async () => {
+  meta.loadMeta()
+  await restoreFromUrl()
+  startSync()
+})
 
 const canCalculate = () => !config.isPoolEmpty && config.strategies.length > 0
 </script>

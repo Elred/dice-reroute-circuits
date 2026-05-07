@@ -24,7 +24,8 @@ function opSummary(op: AttackEffect): string {
   if (op.type === 'add_dice') {
     if (op.color_in_pool) {
       const prio = op.color_priority ? op.color_priority.join(' > ') : '?'
-      let summary = `Add Dice: pool color [${prio}]`
+      const count = op.count && op.count !== 'any' ? (op.count as number) : 1
+      let summary = `Add ${count} From Pool [${prio}]`
       if (op.face_condition) summary += ` if ${humanReadableResult(op.face_condition)} present`
       return summary
     }

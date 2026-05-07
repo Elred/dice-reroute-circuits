@@ -20,7 +20,8 @@ const addBlack = ref(0)
 const faceCondition = ref<string | null>(null)
 const showFaceCondition = ref(false)
 const colorInPool = ref(false)
-const colorPriority = ref<[string, string, string]>(['red', 'blue', 'black'])
+const colorInPoolCount = ref(1)
+const colorPriority = ref<[string, string, string]>(['black', 'blue', 'red'])
 
 // Condition state for reroll_all
 const condAttribute = ref<'damage' | 'crit' | 'acc' | 'blank'>('damage')
@@ -120,7 +121,8 @@ watch([opType, () => config.pool.type], () => {
   faceCondition.value = null
   showFaceCondition.value = false
   colorInPool.value = false
-  colorPriority.value = ['red', 'blue', 'black']
+  colorInPoolCount.value = 1
+  colorPriority.value = ['black', 'blue', 'red']
 })
 
 function movePriority(index: number, direction: -1 | 1) {
@@ -137,7 +139,7 @@ function submit() {
   let op: AttackEffect
   if (opType.value === 'add_dice') {
     if (colorInPool.value) {
-      op = { type: 'add_dice', dice_to_add: { red: 0, blue: 0, black: 0 }, color_in_pool: true, color_priority: [...colorPriority.value] as [string, string, string] }
+      op = { type: 'add_dice', count: colorInPoolCount.value, dice_to_add: { red: 0, blue: 0, black: 0 }, color_in_pool: true, color_priority: [...colorPriority.value] as [string, string, string] }
     } else {
       if (addRed.value + addBlue.value + addBlack.value === 0) return
       op = { type: 'add_dice', dice_to_add: { red: addRed.value, blue: addBlue.value, black: addBlack.value } }
@@ -168,7 +170,7 @@ function submit() {
 const canSubmit = computed(() => {
   if (opType.value === 'add_dice') {
     if (colorInPool.value) {
-      return config.totalDiceCount + 1 <= 20
+      return config.totalDiceCount + colorInPoolCount.value <= 20
     }
     const adding = addRed.value + addBlue.value + addBlack.value
     return adding > 0 && config.totalDiceCount + adding <= 20
@@ -449,6 +451,16 @@ const canSubmit = computed(() => {
         <span class="text-[#f0f0f0] text-xs">Color from pool</span>
       </label>
 
+      <!-- Count selector (shown when colorInPool) -->
+      <div v-if="colorInPool" class="flex items-center gap-2">
+        <span class="text-[#8892a4] text-xs">Count</span>
+        <input
+          v-model.number="colorInPoolCount"
+          type="number" min="1" max="20"
+          class="w-16 bg-[#1a1d2e] text-[#f0f0f0] rounded px-2 py-1 text-xs border border-[#8892a4]/30 focus:border-[#d69e2e] outline-none"
+        />
+      </div>
+
       <!-- Standard R/U/B inputs (hidden when colorInPool) -->
       <div v-if="!colorInPool" class="grid grid-cols-3 gap-2">
         <div>
@@ -494,7 +506,7 @@ const canSubmit = computed(() => {
             >↓</button>
           </div>
         </div>
-        <p v-if="config.totalDiceCount + 1 > 20" class="text-[#e53e3e] text-xs">
+        <p v-if="config.totalDiceCount + colorInPoolCount > 20" class="text-[#e53e3e] text-xs">
           Exceeds 20-dice limit (currently {{ config.totalDiceCount }}).
         </p>
       </div>
