@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useConfigStore } from '../stores/configStore'
+import { useReportStore } from '../stores/reportStore'
 
 const config = useConfigStore()
+const report = useReportStore()
 
 const poolSummary = computed(() => {
   const { red, blue, black } = config.pool
@@ -72,7 +74,7 @@ const TYPE_BUTTONS: [string, string][] = [['ship', 'Ship'], ['squad', 'Squadron'
 
     <!-- Pool summary -->
     <p class="text-[#8892a4] text-xs font-mono">{{ poolSummary }}</p>
-    <p v-if="config.isPoolEmpty" class="text-[#e53e3e] text-xs">Add at least one die to calculate.</p>
+    <p v-if="config.isPoolEmpty && report.groups.length === 0" class="text-[#e53e3e] text-xs">Add at least one die to calculate.</p>
     <p v-else-if="config.totalDiceCount >= 20" class="text-[#e53e3e] text-xs">Maximum of 20 dice reached.</p>
   </div>
 </template>

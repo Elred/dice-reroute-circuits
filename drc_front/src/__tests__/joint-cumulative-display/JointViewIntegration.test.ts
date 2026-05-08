@@ -113,74 +113,58 @@ describe('ResultsPanel Joint View Integration', () => {
   })
 
   describe('Enter Joint View (Requirements 1.1, 1.2)', () => {
-    it('renders JointViewChart after entering joint view on damage chart', async () => {
+    it('clicking a damage bar shows joint view in the accuracy chart area', async () => {
       const { wrapper } = mountResultsPanel()
 
-      // Initially, no JointViewChart should be rendered
       expect(wrapper.findComponent(JointViewChart).exists()).toBe(false)
 
-      // Access the internal joint view state via the component's exposed functions
-      // We simulate what happens when a bar is clicked by directly manipulating
-      // the joint view state through the component's internal logic.
-      // The component uses getJointView which stores instances in a Map.
-      // We trigger the click handler logic by finding the chart options and calling onClick.
-
-      // Since we can't easily trigger Chart.js click events in jsdom,
-      // we access the component's internal state. The ResultsPanel uses
-      // getJointView() which creates useJointView instances stored in a Map.
-      // We can trigger the state change by calling the composable directly.
       const vm = wrapper.vm as any
-
-      // Call the internal function to enter joint view
-      // The card key for the first card is "1-max_damage"
       const cardKey = '1-max_damage'
-      const jv = vm.getJointView(cardKey, 'damage', mockVariant)
-      jv.enterJointView('damage', 1)
 
-      // Skip animation — transition directly to joint mode (as the component does)
+      // Clicking a damage bar enters joint view on the ACCURACY chart key
+      const jv = vm.getJointView(cardKey, 'accuracy', mockVariant)
+      jv.enterJointView('damage', 1)
       jv.state.value = { ...jv.state.value, mode: 'joint' }
 
       await nextTick()
 
-      // Now JointViewChart should be rendered
       const jointChart = wrapper.findComponent(JointViewChart)
       expect(jointChart.exists()).toBe(true)
 
-      // Verify correct props are passed
+      // Anchor is the damage bar that was clicked → gold color
       expect(jointChart.props('anchorLabel')).toBe('damage ≥ 1')
-      expect(jointChart.props('anchorValue')).toBeCloseTo(70) // 0.7 * 100
+      expect(jointChart.props('anchorValue')).toBeCloseTo(70)
       expect(jointChart.props('anchorColor')).toBe('#d69e2e')
       expect(jointChart.props('anchorIsZeroBar')).toBe(false)
-      // jointData[0] is now P(=0) = matrix[1][0]*100 - matrix[1][1]*100 = 70 - 50 = 20
-      // jointData[1] = matrix[1][1]*100 = 50
-      expect(jointChart.props('jointData')).toEqual([20, 50]) // [P(acc=0), P(acc≥1)]
+      // Joint data shows accuracy distribution
+      expect(jointChart.props('jointData')).toEqual([20, 50])
       expect(jointChart.props('jointLabels')).toEqual(['≥0', '≥1'])
       expect(jointChart.props('crossDimensionLabel')).toBe('accuracy')
     })
 
-    it('renders JointViewChart after entering joint view on accuracy chart', async () => {
+    it('clicking an accuracy bar shows joint view in the damage chart area', async () => {
       const { wrapper } = mountResultsPanel()
 
       const vm = wrapper.vm as any
       const cardKey = '1-max_damage'
-      const jv = vm.getJointView(cardKey, 'accuracy', mockVariant)
+      // Clicking accuracy bar enters joint view on the DAMAGE chart key
+      const jv = vm.getJointView(cardKey, 'damage', mockVariant)
       jv.enterJointView('accuracy', 1)
       jv.state.value = { ...jv.state.value, mode: 'joint' }
 
       await nextTick()
 
-      // Find the JointViewChart — there should be one for accuracy
+      // Joint view should render in the damage chart area
       const jointCharts = wrapper.findAllComponents(JointViewChart)
-      const accChart = jointCharts.find(c => c.props('crossDimensionLabel') === 'damage')
-      expect(accChart).toBeDefined()
-      expect(accChart!.props('anchorLabel')).toBe('acc ≥ 1')
-      expect(accChart!.props('anchorValue')).toBeCloseTo(80) // 0.8 * 100
-      expect(accChart!.props('anchorColor')).toBe('#4299e1')
-      // jointData[0] is now P(dmg=0) = matrix[0][1]*100 - matrix[1][1]*100 = 80 - 50 = 30
-      // jointData[1] = matrix[1][1]*100 = 50
-      // jointData[2] = matrix[2][1]*100 = 20
-      expect(accChart!.props('jointData')).toEqual([30, 50, 20]) // [P(dmg=0), P(dmg≥1), P(dmg≥2)]
-      expect(accChart!.props('jointLabels')).toEqual(['≥0', '≥1', '≥2'])
+      const dmgChart = jointCharts.find(c => c.props('crossDimensionLabel') === 'damage')
+      expect(dmgChart).toBeDefined()
+      // Anchor is accuracy → blue color
+      expect(dmgChart!.props('anchorLabel')).toBe('acc ≥ 1')
+      expect(dmgChart!.props('anchorValue')).toBeCloseTo(80)
+      expect(dmgChart!.props('anchorColor')).toBe('#4299e1')
+      // Joint data shows damage distribution
+      expect(dmgChart!.props('jointData')).toEqual([30, 50, 20])
+      expect(dmgChart!.props('jointLabels')).toEqual(['≥0', '≥1', '≥2'])
     })
   })
 

@@ -115,7 +115,6 @@ const showCustomResults = ref(false)
 
 // Reset results and collapse panel when op type or pool type changes
 watch([opType, () => config.pool.type], () => {
-  selectedResults.value = []
   targetResult.value = null
   showCustomResults.value = false
   faceCondition.value = null
@@ -123,6 +122,14 @@ watch([opType, () => config.pool.type], () => {
   colorInPool.value = false
   colorInPoolCount.value = 1
   colorPriority.value = ['black', 'blue', 'red']
+
+  // For cancel: default to all applicable results selected
+  if (opType.value === 'cancel') {
+    const allFaces = resultsByColor.value.flatMap(g => g.faces)
+    selectedResults.value = allFaces
+  } else {
+    selectedResults.value = []
+  }
 })
 
 function movePriority(index: number, direction: -1 | 1) {

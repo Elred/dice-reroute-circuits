@@ -174,13 +174,79 @@ describe('useJointView defense variant extraction', () => {
     // jointData[1] = P(acc≥1) = 0.5*100 = 50
     expect(state.value.jointData).toEqual([20, 50])
 
-    // Post-defense joint data: row 1 = [0.6, 0.4]
-    // jointDataPost[0] = P(acc=0) = 0.6*100 - 0.4*100 = 20
-    // jointDataPost[1] = P(acc≥1) = 0.4*100 = 40
-    expect(state.value.jointDataPost).toEqual([20, 40])
+    // When clicking a damage bar, cross-dimension is accuracy.
+    // Accuracy is pre-defense only, so no post-defense joint accuracy data.
+    expect(state.value.jointDataPost).toBeNull()
 
-    // Anchor value post should be populated
-    expect(state.value.anchorValuePost).not.toBeNull()
+    // But the anchor (damage) DOES have a post-defense value
+    // post_defense.damage[1] = [1, 0.6] → 0.6 * 100 = 60
+    expect(state.value.anchorValuePost).toBeCloseTo(60)
+  })
+
+  it('shows post-defense joint damage data when clicking an accuracy bar', () => {
+    const defenseVariant: VariantResult = {
+      label: 'max_damage',
+      avg_damage: 1.5,
+      crit: 0.3,
+      damage_zero: 0.3,
+      acc_zero: 0.2,
+      damage: [[0, 1.0], [1, 0.7], [2, 0.3]],
+      accuracy: [[0, 1.0], [1, 0.8]],
+      pre_defense: {
+        avg_damage: 1.5,
+        crit: 0.3,
+        damage_zero: 0.3,
+        acc_zero: 0.2,
+        damage: [[0, 1.0], [1, 0.7], [2, 0.3]],
+        accuracy: [[0, 1.0], [1, 0.8]],
+        joint_cumulative: {
+          damage_thresholds: [0, 1, 2],
+          accuracy_thresholds: [0, 1],
+          matrix: [
+            [1.0, 0.8],
+            [0.7, 0.5],
+            [0.3, 0.2],
+          ],
+        },
+      },
+      post_defense: {
+        avg_damage: 1.0,
+        crit: 0.2,
+        damage_zero: 0.4,
+        acc_zero: 0.3,
+        damage: [[0, 1.0], [1, 0.6], [2, 0.2]],
+        accuracy: [[0, 1.0], [1, 0.7]],
+        joint_cumulative: {
+          damage_thresholds: [0, 1, 2],
+          accuracy_thresholds: [0, 1],
+          matrix: [
+            [1.0, 0.7],
+            [0.6, 0.4],
+            [0.2, 0.1],
+          ],
+        },
+      },
+    }
+
+    const variantRef = ref<VariantResult>(defenseVariant)
+    const { state, enterJointView } = useJointView(variantRef)
+
+    enterJointView('accuracy', 1)
+
+    // Pre-defense joint data: column 1 = [0.8, 0.5, 0.2]
+    // jointData[0] = P(dmg=0) = 0.8*100 - 0.5*100 = 30
+    // jointData[1] = P(dmg≥1) = 0.5*100 = 50
+    // jointData[2] = P(dmg≥2) = 0.2*100 = 20
+    expect(state.value.jointData).toEqual([30, 50, 20])
+
+    // Post-defense joint data: column 1 = [0.7, 0.4, 0.1]
+    // jointDataPost[0] = P(dmg=0) = 0.7*100 - 0.4*100 = 30
+    // jointDataPost[1] = P(dmg≥1) = 0.4*100 = 40
+    // jointDataPost[2] = P(dmg≥2) = 0.1*100 = 10
+    expect(state.value.jointDataPost).toEqual([30, 40, 10])
+
+    // Anchor is accuracy — no post-defense anchor value
+    expect(state.value.anchorValuePost).toBeNull()
   })
 })
 

@@ -72,7 +72,12 @@ const jointBorderColor = computed(() =>
 const conditionColor = computed(() => props.anchorColor)
 
 const isDefenseVariant = computed(() =>
-  props.anchorValuePost != null && props.jointDataPost != null
+  props.anchorValuePost != null || (props.jointDataPost != null && props.jointDataPost.length > 0)
+)
+
+// Only show legend when there are actual post-defense joint bars visible
+const showLegend = computed(() =>
+  props.jointDataPost != null && props.jointDataPost.length > 0
 )
 
 const chartData = computed(() => {
@@ -92,12 +97,20 @@ const chartData = computed(() => {
 
   if (isDefenseVariant.value) {
     const preAnchorBg = props.anchorIsZeroBar
-      ? createStripePattern('#d69e2e')
-      : '#d69e2e'
-    const postAnchorBg = '#48bb78'
+      ? createStripePattern(props.anchorColor)
+      : props.anchorColor
 
     const preData = [props.anchorValue, ...props.jointData]
-    const postData = [props.anchorValuePost!, ...props.jointDataPost!]
+
+    const hasPostAnchor = props.anchorValuePost != null
+    const hasPostJoint = props.jointDataPost != null && props.jointDataPost.length > 0
+
+    // Build post-defense data: use null where no post data should appear
+    const postAnchorVal = hasPostAnchor ? props.anchorValuePost! : null
+    const postJointVals = hasPostJoint
+      ? props.jointDataPost!
+      : props.jointData.map(() => null)
+    const postData: (number | null)[] = [postAnchorVal, ...postJointVals]
 
     return {
       labels,
@@ -107,12 +120,12 @@ const chartData = computed(() => {
           data: preData,
           backgroundColor: preData.map((_, i) => {
             if (i === 0) return preAnchorBg
-            if (i === 1) return createStripePattern(jointColor.value) // =0 bar gets stripe
+            if (i === 1) return createStripePattern(jointColor.value)
             return jointColor.value
           }),
           borderColor: preData.map((_, i) => {
-            if (i === 0) return '#b7791f'
-            if (i === 1) return jointColor.value // =0 bar border
+            if (i === 0) return props.anchorColor
+            if (i === 1) return jointColor.value
             return jointBorderColor.value
           }),
           borderWidth: preData.map((_, i) => (i === 0 && props.anchorIsZeroBar) || i === 1 ? 3 : 1),
@@ -120,12 +133,14 @@ const chartData = computed(() => {
         {
           label: 'Post-Defense',
           data: postData,
-          backgroundColor: postData.map((_, i) => {
-            if (i === 0) return postAnchorBg
+          backgroundColor: postData.map((v, i) => {
+            if (v === null) return 'transparent'
+            if (i === 0) return '#48bb78'
+            if (i === 1) return createStripePattern('#48bb78')
             return '#48bb78'
           }),
-          borderColor: postData.map((_, i) => i === 0 ? '#276749' : '#276749'),
-          borderWidth: 1,
+          borderColor: postData.map((v) => v === null ? 'transparent' : '#276749'),
+          borderWidth: postData.map((v) => v === null ? 0 : 1),
         },
       ],
     }
@@ -184,7 +199,7 @@ const chartOptions = computed(() => ({
   },
   plugins: {
     legend: {
-      display: isDefenseVariant.value,
+      display: showLegend.value,
       labels: {
         color: '#f0f0f0',
         font: { size: 10 },
@@ -212,16 +227,38 @@ const chartOptions = computed(() => ({
       },
     },
     tooltip: {
+      filter: (item: any) => {
+        if (item.parsed.y === null || item.parsed.y === undefined) return false
+        return true
+      },
       callbacks: {
+        title: (items: any[]) => {
+          if (!items.length) return ''
+          const idx = items[0].dataIndex
+          const label = items[0].label || ''
+          if (idx === 0) {
+            // Anchor bar — just show its own label
+            return label
+          }
+          // Joint bar — build full joint expression: P(dmg≥2 AND acc≥1)
+          const anchorDim = props.crossDimensionLabel === 'accuracy' ? 'dmg' : 'acc'
+          const anchorPart = props.anchorIsZeroBar
+            ? `${anchorDim}=0`
+            : `${anchorDim}\u2265${props.anchorLabel.match(/\d+/)?.[0] ?? '?'}`
+          // Extract cross-dimension part from bar label: "P(acc≥1)" → "acc≥1"
+          const crossMatch = label.match(/P\((.+)\)/)
+          const crossPart = crossMatch ? crossMatch[1] : label
+          return `P(${anchorPart} AND ${crossPart})`
+        },
         label: (ctx: any) => {
           const v = ctx.parsed.y
-          if (v === 0) return '0%'
+          if (v == null || v === 0) return ' 0%'
           const absV = Math.abs(v)
           if (absV < 0.01) {
             const decimals = Math.ceil(-Math.log10(absV)) + 4
-            return `${v.toFixed(decimals).replace(/\.?0+$/, '')}%`
+            return ` ${v.toFixed(decimals).replace(/\.?0+$/, '')}%`
           }
-          return `${v}%`
+          return ` ${v}%`
         },
       },
     },

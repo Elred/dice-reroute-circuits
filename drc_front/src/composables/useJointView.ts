@@ -178,24 +178,31 @@ export function useJointView(variant: Ref<VariantResult>) {
     const anchorValue = getAnchorValue(v, chartType, barIndex, hasDefense)
 
     // Post-defense data (if available)
+    // Rules for defense variants:
+    // - When clicking a DAMAGE bar: anchor shows pre+post damage overlay,
+    //   but cross-dimension (accuracy) has NO post-defense data since accuracy
+    //   is resolved before defense.
+    // - When clicking an ACCURACY bar: anchor shows only pre-defense accuracy
+    //   (no post overlay), cross-dimension (damage) shows pre+post overlaid.
     let anchorValuePost: number | null = null
     let jointDataPost: number[] | null = null
-    if (postPayload) {
+
+    if (postPayload && chartType === 'damage') {
+      // Anchor is damage — show post-defense damage anchor value
+      if (v.post_defense) {
+        anchorValuePost = barIndex === 0
+          ? (v.post_defense.damage_zero ?? 0) * 100
+          : (v.post_defense.damage?.[barIndex]?.[1] ?? 0) * 100
+      }
+      // Cross-dimension is accuracy — no post-defense joint accuracy data
+      jointDataPost = null
+    } else if (postPayload && chartType === 'accuracy') {
+      // Anchor is accuracy — no post-defense anchor (accuracy is pre-defense only)
+      anchorValuePost = null
+      // Cross-dimension is damage — show post-defense joint damage data
       const postResult = extractJointData(postPayload, chartType, barIndex)
       if (postResult) {
         jointDataPost = postResult.jointData
-        // Get post-defense anchor value from post_defense stats
-        if (v.post_defense) {
-          if (chartType === 'damage') {
-            anchorValuePost = barIndex === 0
-              ? (v.post_defense.damage_zero ?? 0) * 100
-              : (v.post_defense.damage?.[barIndex]?.[1] ?? 0) * 100
-          } else {
-            anchorValuePost = barIndex === 0
-              ? (v.post_defense.acc_zero ?? 0) * 100
-              : (v.post_defense.accuracy?.[barIndex]?.[1] ?? 0) * 100
-          }
-        }
       }
     }
 
