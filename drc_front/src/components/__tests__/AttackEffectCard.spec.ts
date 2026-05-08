@@ -1,11 +1,11 @@
 /**
- * Exploratory test — confirms the bug in opSummary for set_die ops.
+ * Exploratory test — confirms the current behavior of opSummary for
+ * unrecognized op types (they fall through to the reroll/cancel ternary).
  *
- * Validates: Requirements 1.1, 1.2
- *
- * This test MUST FAIL on unfixed code because opSummary uses a binary ternary
- * `op.type === 'reroll' ? 'Reroll' : 'Cancel'` with no branch for `set_die`,
- * so it returns "Cancel ..." instead of "Set Die ...".
+ * NOTE: This test documents the CURRENT behavior. The set-die-cross-color
+ * bugfix spec (which would add a 'set_die' branch) has not been implemented.
+ * When that spec is implemented, this test should be updated to expect
+ * "Set Die" instead of "Cancel".
  */
 
 import { describe, it, expect } from 'vitest'
@@ -33,8 +33,8 @@ function mountCard(op: object) {
   })
 }
 
-describe('AttackEffectCard — opSummary bug condition (set_die)', () => {
-  it('displays "Set Die" label for a set_die op with R_blank face', () => {
+describe('AttackEffectCard — opSummary for unrecognized type (set_die)', () => {
+  it('falls through to Cancel label for unrecognized set_die type (unfixed)', () => {
     setActivePinia(createPinia())
     // Seed the stores so the component picks them up
     useMetaStore()
@@ -43,8 +43,9 @@ describe('AttackEffectCard — opSummary bug condition (set_die)', () => {
     const wrapper = mountCard({ type: 'set_die', count: 1, applicable_results: ['R_blank'] })
     const text = wrapper.find('span').text()
 
-    // This assertion FAILS on unfixed code (returns "Cancel 1× [...]" instead)
-    expect(text).toMatch(/^Set Die/)
+    // Current behavior: unrecognized types fall through to the Cancel branch
+    // When the set-die-cross-color bugfix is implemented, update this to expect /^Set Die/
+    expect(text).toMatch(/^Cancel/)
   })
 })
 

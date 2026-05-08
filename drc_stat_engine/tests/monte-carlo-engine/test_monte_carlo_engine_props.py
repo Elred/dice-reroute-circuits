@@ -101,7 +101,7 @@ def test_property_3_auto_backend_routing(red, blue, black, type_str):
 
     pool = DicePool(red=red, blue=blue, black=black, type=type_str)
     pool_size = red + blue + black
-    selected = _select_backend(pool, "auto")
+    selected = _select_backend(pool, [], "auto")
 
     if pool_size <= 8:
         assert selected is comb, f"pool_size={pool_size} should use combinatorial, got {selected}"
@@ -126,8 +126,8 @@ def test_property_4_explicit_backend_override(red, blue, black, type_str):
 
     pool = DicePool(red=red, blue=blue, black=black, type=type_str)
 
-    assert _select_backend(pool, "combinatorial") is comb
-    assert _select_backend(pool, "montecarlo") is mc
+    assert _select_backend(pool, [], "combinatorial") is comb
+    assert _select_backend(pool, [], "montecarlo") is mc
 
 
 # Feature: monte-carlo-engine, Property 5: Output variant dict structure

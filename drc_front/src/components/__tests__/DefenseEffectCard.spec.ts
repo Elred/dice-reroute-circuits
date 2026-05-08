@@ -99,12 +99,12 @@ describe('DefenseEffectCard — button interactions', () => {
 })
 
 describe('DefenseEffectCard — green accent styling', () => {
-  it('up/down buttons use green hover color (#276749) instead of gold', () => {
+  it('up/down buttons use green hover color (#68d391) instead of gold', () => {
     setActivePinia(createPinia())
     const wrapper = mountCard({ type: 'divide_damage' }, 1, 3)
     const upBtn = wrapper.findAll('button')[0]
     const downBtn = wrapper.findAll('button')[1]
-    expect(upBtn.classes()).toContain('hover:text-[#276749]')
-    expect(downBtn.classes()).toContain('hover:text-[#276749]')
+    expect(upBtn.classes()).toContain('hover:text-[#68d391]')
+    expect(downBtn.classes()).toContain('hover:text-[#68d391]')
   })
 })

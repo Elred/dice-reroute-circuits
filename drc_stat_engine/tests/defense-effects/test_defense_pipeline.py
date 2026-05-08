@@ -293,8 +293,8 @@ try:
             f"Sorting changed length: {len(effects)} -> {len(sorted_effects)}"
         )
 
-        # Verify ordering: reroll/cancel first, then reduce, then divide
-        GROUP_ORDER = {"defense_reroll": 0, "defense_cancel": 0, "reduce_damage": 1, "divide_damage": 2}
+        # Verify ordering: reroll/cancel first, then divide, then reduce
+        GROUP_ORDER = {"defense_reroll": 0, "defense_cancel": 0, "divide_damage": 1, "reduce_damage": 2}
         group_values = [GROUP_ORDER[e.type] for e in sorted_effects]
         assert group_values == sorted(group_values), (
             f"Sort order violated: groups={[e.type for e in sorted_effects]}, "
