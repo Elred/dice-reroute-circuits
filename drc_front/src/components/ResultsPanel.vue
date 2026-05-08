@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -12,6 +12,9 @@ import {
 } from 'chart.js'
 import { useReportStore } from '../stores/reportStore'
 import { useMetaStore } from '../stores/metaStore'
+import { useConfigStore } from '../stores/configStore'
+import { useJointView, isClickable } from '../composables/useJointView'
+import JointViewChart from './JointViewChart.vue'
 import type { VariantResult } from '../types/api'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
@@ -54,6 +57,7 @@ ChartJS.register(expandedHitPlugin)
 
 const report = useReportStore()
 const meta = useMetaStore()
+const config = useConfigStore()
 
 // Diagonal red stripe pattern for =0 bars
 function createStripePattern(baseColor: string, stripeColor: string = '#e53e3e'): CanvasPattern | string {
@@ -110,8 +114,35 @@ function buildTitle(req: import('../types/api').ReportRequest): string {
   if (p.blue)  poolParts.push(`${p.blue} Blue`)
   if (p.black) poolParts.push(`${p.black} Black`)
   const poolStr = `${type} : ${poolParts.join(' ')}`
-  const opParts = pipeline.map(op => {
+
+  // Collapse consecutive color_in_pool effects with the same priority into a
+  // single counted entry. The API receives them expanded (N separate effects),
+  // but the title should show "Add 2 From Pool" not "Add From Pool, Add From Pool".
+  type CollapsedOp = import('../types/api').AttackEffect & { _collapsedCount?: number }
+  const collapsedPipeline: CollapsedOp[] = []
+  for (const op of pipeline) {
+    const prev = collapsedPipeline[collapsedPipeline.length - 1]
+    if (
+      op.type === 'add_dice' &&
+      op.color_in_pool &&
+      prev?.type === 'add_dice' &&
+      prev?.color_in_pool &&
+      JSON.stringify(op.color_priority) === JSON.stringify(prev.color_priority) &&
+      op.face_condition === prev.face_condition
+    ) {
+      prev._collapsedCount = (prev._collapsedCount ?? 1) + 1
+    } else {
+      collapsedPipeline.push({ ...op })
+    }
+  }
+
+  const opParts = collapsedPipeline.map(op => {
     if (op.type === 'add_dice') {
+      if (op.color_in_pool) {
+        // Use _collapsedCount (from expansion collapse) or the stored count field
+        const count = (op as CollapsedOp)._collapsedCount ?? (op.count && op.count !== 'any' ? (op.count as number) : 1)
+        return `Add ${count} From Pool`
+      }
       const d = op.dice_to_add ?? {}
       const added: string[] = []
       if (d.red)   added.push(`${d.red} Red`)
@@ -168,22 +199,22 @@ function damageChartData(variant: VariantResult) {
   const src = variant.pre_defense ?? variant
   const entries: [string, number][] = src.damage.map(([t, p], i) =>
     i === 0
-      ? ['=0', src.damage_zero * 100]
-      : [`≥${t}`, p * 100]
+      ? ['P(dmg=0)', src.damage_zero * 100]
+      : [`P(dmg≥${t})`, p * 100]
   )
 
   // When post_defense exists, show both datasets overlaid on the same chart
   if (variant.post_defense) {
     const postEntries: [string, number][] = variant.post_defense.damage.map(([t, p], i) =>
       i === 0
-        ? ['=0', variant.post_defense!.damage_zero * 100]
-        : [`≥${t}`, p * 100]
+        ? ['P(dmg=0)', variant.post_defense!.damage_zero * 100]
+        : [`P(dmg≥${t})`, p * 100]
     )
     // Use the longer label set (pre may have more thresholds than post or vice versa)
     const maxLen = Math.max(entries.length, postEntries.length)
     const labels = Array.from({ length: maxLen }, (_, i) => {
-      if (i === 0) return '=0'
-      return `≥${i}`
+      if (i === 0) return 'P(dmg=0)'
+      return `P(dmg≥${i})`
     })
     // Pad shorter arrays with 0
     const preData = labels.map((_, i) => entries[i]?.[1] ?? 0)
@@ -216,7 +247,7 @@ function damageChartData(variant: VariantResult) {
   return {
     labels: entries.map(([l]) => l),
     datasets: [{
-      label: 'P(damage)',
+      label: 'Damage',
       data: entries.map(([, v]) => v),
       backgroundColor: colors,
       borderColor: borders,
@@ -229,15 +260,15 @@ function accuracyChartData(variant: VariantResult) {
   const src = variant.pre_defense ?? variant
   const entries: [string, number][] = src.accuracy.map(([t, p], i) =>
     i === 0
-      ? ['=0', src.acc_zero * 100]
-      : [`≥${t}`, p * 100]
+      ? ['P(acc=0)', src.acc_zero * 100]
+      : [`P(acc≥${t})`, p * 100]
   )
   const colors = entries.map((_, i) => i === 0 ? createStripePattern('#4299e1') : '#4299e1')
   const borders = entries.map((_, i) => i === 0 ? '#4299e1' : '#2b6cb0')
   return {
     labels: entries.map(([l]) => l),
     datasets: [{
-      label: 'P(acc)',
+      label: 'Accuracy',
       data: entries.map(([, v]) => v),
       backgroundColor: colors,
       borderColor: borders,
@@ -268,13 +299,18 @@ const chartOptions = {
   },
   plugins: {
     legend: {
-      display: true,
+      // Show legend only when there are multiple datasets (defense variants)
       labels: {
         color: '#f0f0f0',
         font: { size: 10 },
         boxWidth: 12,
+        filter(item: any, chart: any) {
+          // Hide legend items when there's only one dataset
+          return chart.datasets.length > 1
+        },
         generateLabels(chart: any) {
           const datasets = chart.data.datasets
+          if (datasets.length <= 1) return []
           return datasets.map((ds: any, i: number) => {
             // Use the last backgroundColor (always a solid color, not the =0 pattern)
             const bg = Array.isArray(ds.backgroundColor)
@@ -311,6 +347,104 @@ const chartOptions = {
     },
   },
 }
+
+// --- Joint View State Management ---
+
+// Store joint view state per card-chart pair
+const jointViews = new Map<string, ReturnType<typeof useJointView>>()
+
+function getJointView(cardKey: string, chartType: 'damage' | 'accuracy', variant: VariantResult) {
+  const key = `${cardKey}-${chartType}`
+  if (!jointViews.has(key)) {
+    const variantRef = ref(variant)
+    jointViews.set(key, useJointView(variantRef))
+  }
+  return jointViews.get(key)!
+}
+
+function makeDamageChartOptions(cardKey: string, variant: VariantResult) {
+  const clickable = isClickable(variant)
+  if (!clickable) return chartOptions
+  return {
+    ...chartOptions,
+    onClick(_event: any, elements: any[]) {
+      if (elements.length === 0) return
+      const barIndex = elements[0].index
+      // Clicking a damage bar → show joint view in the ACCURACY chart
+      const jv = getJointView(cardKey, 'accuracy', variant)
+      jv.enterJointView('damage', barIndex)
+      if (jv.state.value.mode === 'animating-in') {
+        jv.state.value = { ...jv.state.value, mode: 'joint' }
+      }
+    },
+    onHover(_event: any, elements: any[], chart: any) {
+      const canvas = chart.canvas as HTMLCanvasElement
+      canvas.style.cursor = elements.length > 0 ? 'pointer' : 'default'
+    },
+    hover: {
+      mode: 'index' as const,
+      intersect: false,
+    },
+    elements: {
+      bar: {
+        hoverBorderColor: '#4299e1',
+        hoverBorderWidth: 3,
+      },
+    },
+  }
+}
+
+function makeAccuracyChartOptions(cardKey: string, variant: VariantResult) {
+  const clickable = isClickable(variant)
+  if (!clickable) return chartOptions
+  return {
+    ...chartOptions,
+    onClick(_event: any, elements: any[]) {
+      if (elements.length === 0) return
+      const barIndex = elements[0].index
+      // Clicking an accuracy bar → show joint view in the DAMAGE chart
+      const jv = getJointView(cardKey, 'damage', variant)
+      jv.enterJointView('accuracy', barIndex)
+      if (jv.state.value.mode === 'animating-in') {
+        jv.state.value = { ...jv.state.value, mode: 'joint' }
+      }
+    },
+    onHover(_event: any, elements: any[], chart: any) {
+      const canvas = chart.canvas as HTMLCanvasElement
+      canvas.style.cursor = elements.length > 0 ? 'pointer' : 'default'
+    },
+    hover: {
+      mode: 'index' as const,
+      intersect: false,
+    },
+    elements: {
+      bar: {
+        hoverBorderColor: '#d69e2e',
+        hoverBorderWidth: 3,
+      },
+    },
+  }
+}
+
+/**
+ * Exit joint view directly (skip animation), resetting state to normal.
+ */
+function exitJointViewDirect(cardKey: string, chartType: 'damage' | 'accuracy', variant: VariantResult) {
+  const jv = getJointView(cardKey, chartType, variant)
+  jv.state.value = {
+    mode: 'normal',
+    chartType: null,
+    anchorIndex: 0,
+    anchorThreshold: 0,
+    anchorIsZeroBar: false,
+    anchorValue: 0,
+    jointData: [],
+    jointLabels: [],
+    anchorLabel: '',
+    anchorValuePost: null,
+    jointDataPost: null,
+  }
+}
 </script>
 
 <template>
@@ -340,12 +474,17 @@ const chartOptions = {
         <div v-for="card in allCards" :key="card.key"
              class="bg-[#252840] rounded-lg p-4 space-y-4">
 
-          <!-- Title (pool + pipeline) + dismiss -->
+          <!-- Title (pool + pipeline) + load config + dismiss -->
           <div class="flex items-start gap-2">
             <p class="flex-1 text-[#f0f0f0] text-sm font-semibold">{{ buildTitle(card.group.request) }}</p>
             <button
+              @click="config.loadFromRequest(card.group.request)"
+              class="w-6 h-6 rounded bg-[#1a1d2e] text-[#8892a4] hover:text-[#d69e2e] hover:ring-1 hover:ring-[#d69e2e] text-xs flex-shrink-0 flex items-center justify-center"
+              title="Load into config panel"
+            >⇐</button>
+            <button
               @click="report.removeGroup(card.group.id)"
-              class="w-6 h-6 rounded bg-[#1a1d2e] text-[#8892a4] hover:text-[#e53e3e] text-xs flex-shrink-0 flex items-center justify-center"
+              class="w-6 h-6 rounded bg-[#1a1d2e] text-[#8892a4] hover:text-[#e53e3e] hover:ring-1 hover:ring-[#d69e2e] text-xs flex-shrink-0 flex items-center justify-center"
               title="Dismiss"
             >✕</button>
           </div>
@@ -372,15 +511,69 @@ const chartOptions = {
           <!-- Charts -->
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <p class="text-[#8892a4] text-xs mb-1">Cumulative Damage</p>
-              <div class="h-36">
-                <Bar :data="damageChartData(card.variant)" :options="chartOptions" />
+              <p v-if="getJointView(card.key, 'damage', card.variant).state.value.mode === 'normal'" class="text-[#8892a4] text-xs mb-1">Cumulative Damage</p>
+              <p v-else class="text-[#8892a4] text-xs mb-1">
+                Cumulative Damage for
+                <span class="text-[#4299e1] font-bold">{{ getJointView(card.key, 'damage', card.variant).state.value.anchorLabel }}</span>
+              </p>
+              <div class="h-36 relative">
+                <Bar
+                  v-if="getJointView(card.key, 'damage', card.variant).state.value.mode === 'normal'"
+                  :data="damageChartData(card.variant)"
+                  :options="makeDamageChartOptions(card.key, card.variant)"
+                />
+                <template v-else-if="getJointView(card.key, 'damage', card.variant).state.value.mode === 'joint'">
+                  <button
+                    @click="exitJointViewDirect(card.key, 'damage', card.variant)"
+                    class="absolute top-0 right-0 z-10 w-5 h-5 rounded bg-[#1a1d2e] text-[#8892a4] hover:text-[#e53e3e] hover:ring-1 hover:ring-[#d69e2e] text-xs flex items-center justify-center"
+                    title="Close joint view"
+                  >✕</button>
+                  <JointViewChart
+                    :anchor-label="getJointView(card.key, 'damage', card.variant).state.value.anchorLabel"
+                    :anchor-value="getJointView(card.key, 'damage', card.variant).state.value.anchorValue"
+                    :anchor-color="'#4299e1'"
+                    :anchor-is-zero-bar="getJointView(card.key, 'damage', card.variant).state.value.anchorIsZeroBar"
+                    :joint-data="getJointView(card.key, 'damage', card.variant).state.value.jointData"
+                    :joint-labels="getJointView(card.key, 'damage', card.variant).state.value.jointLabels"
+                    :cross-dimension-label="'damage'"
+                    :anchor-value-post="getJointView(card.key, 'damage', card.variant).state.value.anchorValuePost"
+                    :joint-data-post="getJointView(card.key, 'damage', card.variant).state.value.jointDataPost"
+                    @exit="exitJointViewDirect(card.key, 'damage', card.variant)"
+                  />
+                </template>
               </div>
             </div>
             <div v-if="(card.variant.pre_defense?.accuracy ?? card.variant.accuracy)?.length > 1">
-              <p class="text-[#8892a4] text-xs mb-1">Cumulative Accuracy</p>
-              <div class="h-36">
-                <Bar :data="accuracyChartData(card.variant)" :options="chartOptions" />
+              <p v-if="getJointView(card.key, 'accuracy', card.variant).state.value.mode === 'normal'" class="text-[#8892a4] text-xs mb-1">Cumulative Accuracy</p>
+              <p v-else class="text-[#8892a4] text-xs mb-1">
+                Cumulative Accuracy for
+                <span class="text-[#d69e2e] font-bold">{{ getJointView(card.key, 'accuracy', card.variant).state.value.anchorLabel }}</span>
+              </p>
+              <div class="h-36 relative">
+                <Bar
+                  v-if="getJointView(card.key, 'accuracy', card.variant).state.value.mode === 'normal'"
+                  :data="accuracyChartData(card.variant)"
+                  :options="makeAccuracyChartOptions(card.key, card.variant)"
+                />
+                <template v-else-if="getJointView(card.key, 'accuracy', card.variant).state.value.mode === 'joint'">
+                  <button
+                    @click="exitJointViewDirect(card.key, 'accuracy', card.variant)"
+                    class="absolute top-0 right-0 z-10 w-5 h-5 rounded bg-[#1a1d2e] text-[#8892a4] hover:text-[#e53e3e] hover:ring-1 hover:ring-[#d69e2e] text-xs flex items-center justify-center"
+                    title="Close joint view"
+                  >✕</button>
+                  <JointViewChart
+                    :anchor-label="getJointView(card.key, 'accuracy', card.variant).state.value.anchorLabel"
+                    :anchor-value="getJointView(card.key, 'accuracy', card.variant).state.value.anchorValue"
+                    :anchor-color="'#d69e2e'"
+                    :anchor-is-zero-bar="getJointView(card.key, 'accuracy', card.variant).state.value.anchorIsZeroBar"
+                    :joint-data="getJointView(card.key, 'accuracy', card.variant).state.value.jointData"
+                    :joint-labels="getJointView(card.key, 'accuracy', card.variant).state.value.jointLabels"
+                    :cross-dimension-label="'accuracy'"
+                    :anchor-value-post="getJointView(card.key, 'accuracy', card.variant).state.value.anchorValuePost"
+                    :joint-data-post="getJointView(card.key, 'accuracy', card.variant).state.value.jointDataPost"
+                    @exit="exitJointViewDirect(card.key, 'accuracy', card.variant)"
+                  />
+                </template>
               </div>
             </div>
           </div>

@@ -1,3 +1,46 @@
+### Joint Cumulative Probability Display
+- Click any bar in the damage or accuracy chart to see joint probabilities in the opposite chart
+- Clicking a damage bar shows "Cumulative Accuracy for damage ≥ X" in the accuracy chart area
+- Clicking an accuracy bar shows "Cumulative Damage for acc ≥ Y" in the damage chart area
+- Close button (✕) on the top-right of the joint chart to return to normal view
+- Clicking the anchor bar also returns to normal view
+
+### Shareable Report URLs
+- Report configurations encoded in URL query parameters for sharing
+- Multiple reports supported via repeated `r` params
+- Reports restored on page load from URL
+
+### Load Config from Report
+- New ⇐ button on each report card to load its configuration into the left panel
+- Sets dice pool, attack effects, defense effects, strategy, and precision
+- Useful for tweaking an existing setup or restoring from a shared URL
+
+### UI Improvements
+- Bar labels now include dimension prefix: P(dmg=0), P(dmg≥1), P(acc=0), P(acc≥1)
+- Color legend removed from single-dataset charts (redundant with labeled bars)
+- Hover highlight with opposite-dimension border color (blue on damage bars, gold on accuracy bars)
+- Gold border on hover for dismiss and load-config buttons
+- "Add at least one die" error hidden when results are already displayed (e.g. from shared URL)
+- Cancel attack effect now defaults to all applicable results selected
+
+---
+
+## 0.2.2
+
+### Bug Fixes
+- Fix cancel operation bug causing dice results to disappear
+
+---
+
+## 0.2.1
+
+### Bug Fixes
+- Fix halve/reduce defense priority ordering
+
+---
+
+## 0.2.0
+
 ### Defense Effects
 - New defense pipeline: model what happens after the attacker rolls
 - Defensive reroll with two modes: Safe (no risk of worsening the roll) and Gamble (risking the double)

@@ -29,7 +29,7 @@ data = {
     ],
     "strategies": ["max_damage"],
 }
-pool, pipeline, strategies = parse_report_request(data)
+pool, pipeline, strategies, _defense = parse_report_request(data)
 check("add_set_die parsed", pipeline[0].type == "add_set_die")
 check("add_set_die target_result", pipeline[0].target_result == "R_hit")
 
@@ -42,7 +42,7 @@ data2 = {
     ],
     "strategies": ["max_damage"],
 }
-pool2, pipeline2, _ = parse_report_request(data2)
+pool2, pipeline2, _, _defense2 = parse_report_request(data2)
 check("add_set_die increments running_size",
       pipeline2[1].count == 2,
       f"expected 2, got {pipeline2[1].count}")
@@ -70,7 +70,7 @@ data3 = {
     ],
     "strategies": ["max_damage"],
 }
-_, pipeline3, _ = parse_report_request(data3)
+_, pipeline3, _, _d = parse_report_request(data3)
 check("face_condition on add_dice parsed",
       pipeline3[0].face_condition == "R_acc",
       f"got {pipeline3[0].face_condition}")
@@ -83,7 +83,7 @@ data4 = {
     ],
     "strategies": ["max_damage"],
 }
-_, pipeline4, _ = parse_report_request(data4)
+_, pipeline4, _, _d = parse_report_request(data4)
 check("face_condition on add_set_die parsed",
       pipeline4[0].face_condition == "R_acc",
       f"got {pipeline4[0].face_condition}")
@@ -96,7 +96,7 @@ data5 = {
     ],
     "strategies": ["max_damage"],
 }
-_, pipeline5, _ = parse_report_request(data5)
+_, pipeline5, _, _d = parse_report_request(data5)
 check("face_condition defaults to None",
       pipeline5[0].face_condition is None,
       f"got {pipeline5[0].face_condition}")
@@ -111,7 +111,7 @@ data6 = {
     ],
     "strategies": ["max_damage"],
 }
-_, pipeline6, _ = parse_report_request(data6)
+_, pipeline6, _, _d = parse_report_request(data6)
 check("color_in_pool parsed as True",
       pipeline6[0].color_in_pool is True,
       f"got {pipeline6[0].color_in_pool}")
@@ -127,7 +127,7 @@ data7 = {
     ],
     "strategies": ["max_damage"],
 }
-_, pipeline7, _ = parse_report_request(data7)
+_, pipeline7, _, _d = parse_report_request(data7)
 check("color_in_pool defaults to False",
       pipeline7[0].color_in_pool is False,
       f"got {pipeline7[0].color_in_pool}")
@@ -143,7 +143,7 @@ data8 = {
     ],
     "strategies": ["max_damage"],
 }
-_, pipeline8, _ = parse_report_request(data8)
+_, pipeline8, _, _d = parse_report_request(data8)
 check("color_in_pool True without color_priority",
       pipeline8[0].color_in_pool is True and pipeline8[0].color_priority is None,
       f"got color_in_pool={pipeline8[0].color_in_pool}, color_priority={pipeline8[0].color_priority}")
@@ -159,7 +159,7 @@ data9 = {
     ],
     "strategies": ["max_damage"],
 }
-_, pipeline9, _ = parse_report_request(data9)
+_, pipeline9, _, _d = parse_report_request(data9)
 check("existing reroll still works", pipeline9[0].type == "reroll")
 check("existing cancel still works", pipeline9[1].type == "cancel")
 check("existing change_die still works",

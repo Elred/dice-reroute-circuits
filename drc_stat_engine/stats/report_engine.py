@@ -410,6 +410,52 @@ def average_damage(roll_df) -> float:
     return float((roll_df["damage"] * roll_df["proba"]).sum())
 
 
+def joint_cumulative_damage_accuracy(roll_df: pd.DataFrame) -> dict:
+    """
+    Compute the joint cumulative probability table P(damage >= X AND accuracy >= Y).
+
+    Uses vectorized numpy broadcasting to avoid per-cell Python iteration.
+
+    Parameters
+    ----------
+    roll_df : pd.DataFrame
+        Roll distribution with columns: value, proba, damage, crit, acc, blank.
+        Probabilities must sum to 1.0.
+
+    Returns
+    -------
+    dict with keys:
+        - "damage_thresholds": list[int] — row labels [0, 1, ..., max_damage]
+        - "accuracy_thresholds": list[int] — column labels [0, 1, ..., max_accuracy]
+        - "matrix": list[list[float]] — matrix[i][j] = P(damage >= i AND acc >= j)
+
+    Requirements: 1.1, 1.2, 1.3, 1.4, 1.6, 3.1, 3.2, 3.3, 4.1
+    """
+    max_damage = int(roll_df["damage"].max())
+    max_acc = int(roll_df["acc"].max())
+
+    damage_thresholds = list(range(0, max_damage + 1))
+    accuracy_thresholds = list(range(0, max_acc + 1))
+
+    damage_vals = roll_df["damage"].values
+    acc_vals = roll_df["acc"].values
+    proba_vals = roll_df["proba"].values
+
+    # Boolean masks via broadcasting: shape (D, N) and (A, N)
+    dmg_mask = damage_vals[np.newaxis, :] >= np.array(damage_thresholds)[:, np.newaxis]
+    acc_mask = acc_vals[np.newaxis, :] >= np.array(accuracy_thresholds)[:, np.newaxis]
+
+    # Joint probability matrix: shape (D, A)
+    # matrix[i][j] = sum of proba where damage >= i AND acc >= j
+    matrix = dmg_mask.astype(float) @ (proba_vals[:, np.newaxis] * acc_mask.T.astype(float))
+
+    return {
+        "damage_thresholds": damage_thresholds,
+        "accuracy_thresholds": accuracy_thresholds,
+        "matrix": matrix.tolist(),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Defense pipeline functions
 # Requirements: 4.1-5.5, 6.1-6.4, 7.2-7.3, 14.1-14.4
@@ -454,9 +500,10 @@ def divide_damage_df(roll_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def compute_variant_stats(roll_df: pd.DataFrame) -> dict:
-    """Extract damage, accuracy, crit, avg_damage, damage_zero, acc_zero from a roll_df.
-    Reuses existing cumulative_damage, cumulative_accuracy, crit_probability, average_damage.
-    Requirements: 7.2, 7.3, 8.2, 8.3
+    """Extract damage, accuracy, crit, avg_damage, damage_zero, acc_zero, joint_cumulative from a roll_df.
+    Reuses existing cumulative_damage, cumulative_accuracy, crit_probability, average_damage,
+    joint_cumulative_damage_accuracy.
+    Requirements: 2.1, 2.2, 2.3, 7.2, 7.3, 8.2, 8.3
     """
     return {
         "damage": cumulative_damage(roll_df),
@@ -465,6 +512,7 @@ def compute_variant_stats(roll_df: pd.DataFrame) -> dict:
         "acc_zero": float(roll_df.loc[roll_df["acc"] == 0, "proba"].sum()),
         "crit": crit_probability(roll_df),
         "avg_damage": average_damage(roll_df),
+        "joint_cumulative": joint_cumulative_damage_accuracy(roll_df),
     }
 
 
@@ -626,6 +674,7 @@ def generate_report(
                 "acc_zero":   float(final_df.loc[final_df["acc"] == 0, "proba"].sum()),
                 "crit":       crit_probability(final_df),
                 "avg_damage": average_damage(final_df),
+                "joint_cumulative": joint_cumulative_damage_accuracy(final_df),
                 "priority_list": priority_list,
                 "engine_type": engine_type,
             })

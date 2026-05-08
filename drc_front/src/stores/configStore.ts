@@ -33,7 +33,7 @@ export const useConfigStore = defineStore('config', () => {
       .reduce((sum, op) => sum + (op.dice_to_add!.red + op.dice_to_add!.blue + op.dice_to_add!.black), 0)
     const colorInPoolCount = pipeline.value
       .filter(op => op.type === 'add_dice' && op.color_in_pool)
-      .length
+      .reduce((sum, op) => sum + (op.count && op.count !== 'any' ? (op.count as number) : 1), 0)
     const setDice = pipeline.value
       .filter(op => op.type === 'add_set_die')
       .length
@@ -72,13 +72,41 @@ export const useConfigStore = defineStore('config', () => {
     defensePipeline.value.splice(to, 0, op)
   }
 
+  let _isLoadingFromRequest = false
+
   // When type or bomber changes, drop strategies not valid for the effective type
   watch([() => pool.type, bomber], () => {
+    if (_isLoadingFromRequest) return
     const meta = useMetaStore()
     const valid = meta.strategiesForType(effectiveType.value)
     strategies.value = strategies.value.filter(s => valid.includes(s))
     if (pool.type === 'ship') bomber.value = false
   })
 
-  return { pool, pipeline, strategies, precision, defensePipeline, bomber, effectiveType, poolLabel, isPoolEmpty, totalDiceCount, addAttackEffect, removeAttackEffect, moveAttackEffect, toggleStrategy, addDefenseEffect, removeDefenseEffect, moveDefenseEffect }
+  /**
+   * Load a ReportRequest into the config panel (dice pool, pipeline, strategies, defense).
+   */
+  function loadFromRequest(req: import('../types/api').ReportRequest) {
+    _isLoadingFromRequest = true
+
+    // Determine bomber state from pool_label
+    const isBomber = req.pool_label === 'Bomber'
+
+    // For bombers, the request stores type='ship' (effectiveType), but actual pool type is 'squad'
+    pool.type = isBomber ? 'squad' : req.dice_pool.type
+    bomber.value = isBomber
+
+    pool.red = req.dice_pool.red
+    pool.blue = req.dice_pool.blue
+    pool.black = req.dice_pool.black
+
+    pipeline.value = JSON.parse(JSON.stringify(req.pipeline))
+    strategies.value = [...req.strategies]
+    precision.value = req.precision ?? 'high'
+    defensePipeline.value = req.defense_pipeline ? JSON.parse(JSON.stringify(req.defense_pipeline)) : []
+
+    _isLoadingFromRequest = false
+  }
+
+  return { pool, pipeline, strategies, precision, defensePipeline, bomber, effectiveType, poolLabel, isPoolEmpty, totalDiceCount, addAttackEffect, removeAttackEffect, moveAttackEffect, toggleStrategy, addDefenseEffect, removeDefenseEffect, moveDefenseEffect, loadFromRequest }
 })

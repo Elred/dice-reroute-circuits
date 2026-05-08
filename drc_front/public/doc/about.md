@@ -3,7 +3,11 @@
 
 Use it to evaluate fleet builds, compare upgrade combinations, and understand how the odds behind your attack rolls actually work.
 
-## Basic Usagerategies** — choose one strategy for picking reroll, cancel, dice to change when given choice.
+## Basic Usage
+
+1. **Configure your dice pool** — select the number of Red, Blue, and Black dice and choose Ship or Squadron type.
+2. **Add attack effects** — optionally add reroll, cancel, add dice, or change die effects to your pipeline.
+3. **Select strategies** — choose one strategy for picking which dice to reroll, cancel, or change when given a choice.
 4. **Calculate** — the engine computes probability distributions and statistics for each selected strategy.
 
 **Note**: Currently, this tool use either combinatories or Monte Carlo simulation to produce results. This means that for large dice pools & attack effects stacks (anything over 8 dice total, or with enough dice and rerolls that combinatories get very heavy), the result will not be exact probabilities, but approximated over 100 thousand simulated rolls.
@@ -50,6 +54,7 @@ For each strategy variant, DRC reports:
 
 - **Cumulative damage distribution** — P(damage ≥ x) for each integer threshold
 - **Cumulative accuracy distribution** — P(acc ≥ x) for each integer threshold
+- For both cumulative distribution, clicking the graph show the cumulated distribution of the other metric (ex P(damage = 5 AND acc ≥ x))
 - **Crit probability** — P(crit ≥ 1)
 - **Average damage** — E[damage]
 
@@ -57,9 +62,9 @@ For each strategy variant, DRC reports:
 
 This will probably make it in the tool at some point.
 
-* **Cover all existing content**: The tools covers most dice manipulation effects, but some are missing, such as mandatory rerolls (Veteran gunners)
-* **Custom strategy**: Currently I have a few presets defined, but user should be able to set their own
-* **Defense tokens**: Implement odds reports through expected defense tech
+* **Cover all existing content**: The tools covers most dice manipulation effects, but some are missing, or the logic to apply them or not is not refined enough.
+* **Custom strategy**: Currently I have a few presets defined, but user should be able to set their own.
+* **Defense tokens**: Improve defense effects setting up to better reflect in game mechanics. (such as disabling effects when accuracies are present)
 * **Conditional effect strategy**: For example, set a desired amount of accuracy to ignore rerolls or change effects on dice rolls that already fit the requirements
 * **Comparison between reports**: Make it easier to visualize the difference between 2 setups
 * **Upgrade picker**: Not yet sure how to make it easy to navigate, but eventually I'd like to make it possible to select upgrades directly

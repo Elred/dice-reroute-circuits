@@ -44,6 +44,12 @@ export interface ReportRequest {
 
 // --- Response types ---
 
+export interface JointCumulativePayload {
+  damage_thresholds: number[]
+  accuracy_thresholds: number[]
+  matrix: number[][]
+}
+
 export interface VariantStats {
   avg_damage: number
   crit: number
@@ -51,6 +57,7 @@ export interface VariantStats {
   acc_zero: number
   damage: [number, number][]
   accuracy: [number, number][]
+  joint_cumulative?: JointCumulativePayload
 }
 
 export interface VariantResult {
@@ -64,6 +71,7 @@ export interface VariantResult {
   engine_type?: string
   pre_defense?: VariantStats
   post_defense?: VariantStats
+  joint_cumulative?: JointCumulativePayload
 }
 
 export interface ReportResponse {

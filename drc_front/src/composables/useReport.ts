@@ -17,6 +17,18 @@ export function useReport() {
     if (config.defensePipeline.length > 0) {
       req.defense_pipeline = JSON.parse(JSON.stringify(config.defensePipeline))
     }
+
+    // Expand color_in_pool effects with count > 1 into N single-die effects.
+    // The backend processes each add_dice effect as a single die addition,
+    // so we repeat the effect to achieve the desired count.
+    req.pipeline = req.pipeline.flatMap((op) => {
+      if (op.type === 'add_dice' && op.color_in_pool && typeof op.count === 'number' && op.count > 1) {
+        const { count: _count, ...singleDieOp } = op
+        return Array.from({ length: _count }, () => ({ ...singleDieOp }))
+      }
+      return [op]
+    })
+
     return req
   }
 
