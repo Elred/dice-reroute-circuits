@@ -12,6 +12,7 @@ import {
 } from 'chart.js'
 import { useReportStore } from '../stores/reportStore'
 import { useMetaStore } from '../stores/metaStore'
+import { useConfigStore } from '../stores/configStore'
 import { useJointView, isClickable } from '../composables/useJointView'
 import JointViewChart from './JointViewChart.vue'
 import type { VariantResult } from '../types/api'
@@ -56,6 +57,7 @@ ChartJS.register(expandedHitPlugin)
 
 const report = useReportStore()
 const meta = useMetaStore()
+const config = useConfigStore()
 
 // Diagonal red stripe pattern for =0 bars
 function createStripePattern(baseColor: string, stripeColor: string = '#e53e3e'): CanvasPattern | string {
@@ -472,12 +474,17 @@ function exitJointViewDirect(cardKey: string, chartType: 'damage' | 'accuracy', 
         <div v-for="card in allCards" :key="card.key"
              class="bg-[#252840] rounded-lg p-4 space-y-4">
 
-          <!-- Title (pool + pipeline) + dismiss -->
+          <!-- Title (pool + pipeline) + load config + dismiss -->
           <div class="flex items-start gap-2">
             <p class="flex-1 text-[#f0f0f0] text-sm font-semibold">{{ buildTitle(card.group.request) }}</p>
             <button
+              @click="config.loadFromRequest(card.group.request)"
+              class="w-6 h-6 rounded bg-[#1a1d2e] text-[#8892a4] hover:text-[#d69e2e] hover:ring-1 hover:ring-[#d69e2e] text-xs flex-shrink-0 flex items-center justify-center"
+              title="Load into config panel"
+            >⇐</button>
+            <button
               @click="report.removeGroup(card.group.id)"
-              class="w-6 h-6 rounded bg-[#1a1d2e] text-[#8892a4] hover:text-[#e53e3e] text-xs flex-shrink-0 flex items-center justify-center"
+              class="w-6 h-6 rounded bg-[#1a1d2e] text-[#8892a4] hover:text-[#e53e3e] hover:ring-1 hover:ring-[#d69e2e] text-xs flex-shrink-0 flex items-center justify-center"
               title="Dismiss"
             >✕</button>
           </div>
@@ -518,7 +525,7 @@ function exitJointViewDirect(cardKey: string, chartType: 'damage' | 'accuracy', 
                 <template v-else-if="getJointView(card.key, 'damage', card.variant).state.value.mode === 'joint'">
                   <button
                     @click="exitJointViewDirect(card.key, 'damage', card.variant)"
-                    class="absolute top-0 right-0 z-10 w-5 h-5 rounded bg-[#1a1d2e] text-[#8892a4] hover:text-[#e53e3e] text-xs flex items-center justify-center"
+                    class="absolute top-0 right-0 z-10 w-5 h-5 rounded bg-[#1a1d2e] text-[#8892a4] hover:text-[#e53e3e] hover:ring-1 hover:ring-[#d69e2e] text-xs flex items-center justify-center"
                     title="Close joint view"
                   >✕</button>
                   <JointViewChart
@@ -551,7 +558,7 @@ function exitJointViewDirect(cardKey: string, chartType: 'damage' | 'accuracy', 
                 <template v-else-if="getJointView(card.key, 'accuracy', card.variant).state.value.mode === 'joint'">
                   <button
                     @click="exitJointViewDirect(card.key, 'accuracy', card.variant)"
-                    class="absolute top-0 right-0 z-10 w-5 h-5 rounded bg-[#1a1d2e] text-[#8892a4] hover:text-[#e53e3e] text-xs flex items-center justify-center"
+                    class="absolute top-0 right-0 z-10 w-5 h-5 rounded bg-[#1a1d2e] text-[#8892a4] hover:text-[#e53e3e] hover:ring-1 hover:ring-[#d69e2e] text-xs flex items-center justify-center"
                     title="Close joint view"
                   >✕</button>
                   <JointViewChart
