@@ -151,7 +151,9 @@ describe('ResultsPanel Joint View Integration', () => {
       expect(jointChart.props('anchorValue')).toBeCloseTo(70) // 0.7 * 100
       expect(jointChart.props('anchorColor')).toBe('#d69e2e')
       expect(jointChart.props('anchorIsZeroBar')).toBe(false)
-      expect(jointChart.props('jointData')).toEqual([70, 50]) // matrix[1] * 100
+      // jointData[0] is now P(=0) = matrix[1][0]*100 - matrix[1][1]*100 = 70 - 50 = 20
+      // jointData[1] = matrix[1][1]*100 = 50
+      expect(jointChart.props('jointData')).toEqual([20, 50]) // [P(acc=0), P(acc≥1)]
       expect(jointChart.props('jointLabels')).toEqual(['≥0', '≥1'])
       expect(jointChart.props('crossDimensionLabel')).toBe('accuracy')
     })
@@ -174,18 +176,21 @@ describe('ResultsPanel Joint View Integration', () => {
       expect(accChart!.props('anchorLabel')).toBe('acc ≥ 1')
       expect(accChart!.props('anchorValue')).toBeCloseTo(80) // 0.8 * 100
       expect(accChart!.props('anchorColor')).toBe('#4299e1')
-      expect(accChart!.props('jointData')).toEqual([80, 50, 20]) // matrix column 1 * 100
+      // jointData[0] is now P(dmg=0) = matrix[0][1]*100 - matrix[1][1]*100 = 80 - 50 = 30
+      // jointData[1] = matrix[1][1]*100 = 50
+      // jointData[2] = matrix[2][1]*100 = 20
+      expect(accChart!.props('jointData')).toEqual([30, 50, 20]) // [P(dmg=0), P(dmg≥1), P(dmg≥2)]
       expect(accChart!.props('jointLabels')).toEqual(['≥0', '≥1', '≥2'])
     })
   })
 
-  describe('Back arrow button (Requirements 4.1, 4.2, 4.5)', () => {
-    it('back arrow is visible when a chart is in joint view', async () => {
+  describe('Close button on chart (Requirements 4.1, 4.2, 4.5)', () => {
+    it('close button (✕) is visible on the chart when in joint view', async () => {
       const { wrapper } = mountResultsPanel()
 
-      // Initially, no back arrow should be visible
-      const backBtnBefore = wrapper.find('button[title="Back to normal view"]')
-      expect(backBtnBefore.exists()).toBe(false)
+      // Initially, no close button should be visible on the chart
+      const closeBtnBefore = wrapper.find('button[title="Close joint view"]')
+      expect(closeBtnBefore.exists()).toBe(false)
 
       // Enter joint view
       const vm = wrapper.vm as any
@@ -196,13 +201,13 @@ describe('ResultsPanel Joint View Integration', () => {
 
       await nextTick()
 
-      // Back arrow should now be visible
-      const backBtn = wrapper.find('button[title="Back to normal view"]')
-      expect(backBtn.exists()).toBe(true)
-      expect(backBtn.text()).toBe('←')
+      // Close button should now be visible on the chart
+      const closeBtn = wrapper.find('button[title="Close joint view"]')
+      expect(closeBtn.exists()).toBe(true)
+      expect(closeBtn.text()).toBe('✕')
     })
 
-    it('back arrow is positioned left of dismiss button', async () => {
+    it('close button is positioned at top-right of the chart area', async () => {
       const { wrapper } = mountResultsPanel()
 
       // Enter joint view
@@ -214,23 +219,15 @@ describe('ResultsPanel Joint View Integration', () => {
 
       await nextTick()
 
-      // Find both buttons in the card header
-      const backBtn = wrapper.find('button[title="Back to normal view"]')
-      const dismissBtn = wrapper.find('button[title="Dismiss"]')
-
-      expect(backBtn.exists()).toBe(true)
-      expect(dismissBtn.exists()).toBe(true)
-
-      // The back arrow should appear before the dismiss button in DOM order
-      // (which means it's positioned to the left in a flex row)
-      const headerDiv = backBtn.element.parentElement!
-      const buttons = Array.from(headerDiv.querySelectorAll('button'))
-      const backIndex = buttons.indexOf(backBtn.element as HTMLButtonElement)
-      const dismissIndex = buttons.indexOf(dismissBtn.element as HTMLButtonElement)
-      expect(backIndex).toBeLessThan(dismissIndex)
+      // The close button should be inside the chart container (relative div)
+      const closeBtn = wrapper.find('button[title="Close joint view"]')
+      expect(closeBtn.exists()).toBe(true)
+      expect(closeBtn.classes()).toContain('absolute')
+      expect(closeBtn.classes()).toContain('top-0')
+      expect(closeBtn.classes()).toContain('right-0')
     })
 
-    it('clicking back arrow returns to normal view and hides the arrow', async () => {
+    it('clicking close button returns to normal view and hides the button', async () => {
       const { wrapper } = mountResultsPanel()
 
       // Enter joint view
@@ -245,20 +242,20 @@ describe('ResultsPanel Joint View Integration', () => {
       // Verify joint view is active
       expect(wrapper.findComponent(JointViewChart).exists()).toBe(true)
 
-      // Click the back arrow
-      const backBtn = wrapper.find('button[title="Back to normal view"]')
-      await backBtn.trigger('click')
+      // Click the close button
+      const closeBtn = wrapper.find('button[title="Close joint view"]')
+      await closeBtn.trigger('click')
       await nextTick()
 
-      // Should return to normal view (exitJointViewDirect resets to 'normal')
+      // Should return to normal view
       expect(jv.state.value.mode).toBe('normal')
 
       // JointViewChart should no longer be rendered
       expect(wrapper.findComponent(JointViewChart).exists()).toBe(false)
 
-      // Back arrow should be hidden
-      const backBtnAfter = wrapper.find('button[title="Back to normal view"]')
-      expect(backBtnAfter.exists()).toBe(false)
+      // Close button should be hidden
+      const closeBtnAfter = wrapper.find('button[title="Close joint view"]')
+      expect(closeBtnAfter.exists()).toBe(false)
     })
   })
 
@@ -321,8 +318,8 @@ describe('ResultsPanel Joint View Integration', () => {
       // No JointViewChart should be rendered
       expect(wrapper.findComponent(JointViewChart).exists()).toBe(false)
 
-      // No back arrow should be visible
-      expect(wrapper.find('button[title="Back to normal view"]').exists()).toBe(false)
+      // No close button should be visible
+      expect(wrapper.find('button[title="Close joint view"]').exists()).toBe(false)
     })
   })
 })

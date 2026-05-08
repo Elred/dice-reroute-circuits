@@ -169,11 +169,15 @@ describe('useJointView defense variant extraction', () => {
 
     enterJointView('damage', 1)
 
-    // Pre-defense joint data should come from pre_defense payload row 1
-    expect(state.value.jointData).toEqual([0.7 * 100, 0.5 * 100])
+    // Pre-defense joint data: row 1 = [0.7, 0.5]
+    // jointData[0] = P(acc=0) = 0.7*100 - 0.5*100 = 20
+    // jointData[1] = P(acc≥1) = 0.5*100 = 50
+    expect(state.value.jointData).toEqual([20, 50])
 
-    // Post-defense joint data should come from post_defense payload row 1
-    expect(state.value.jointDataPost).toEqual([0.6 * 100, 0.4 * 100])
+    // Post-defense joint data: row 1 = [0.6, 0.4]
+    // jointDataPost[0] = P(acc=0) = 0.6*100 - 0.4*100 = 20
+    // jointDataPost[1] = P(acc≥1) = 0.4*100 = 40
+    expect(state.value.jointDataPost).toEqual([20, 40])
 
     // Anchor value post should be populated
     expect(state.value.anchorValuePost).not.toBeNull()

@@ -58,18 +58,39 @@ function createStripePattern(baseColor: string, stripeColor: string = '#e53e3e')
   return ctx.createPattern(canvas, 'repeat') ?? baseColor
 }
 
-const JOINT_COLOR = '#9f7aea'
-const JOINT_COLOR_LIGHT = '#b794f4'
+// Joint bar color matches the cross-dimension's main chart color:
+// - When showing accuracy bars (crossDimensionLabel='accuracy'), use blue (#4299e1)
+// - When showing damage bars (crossDimensionLabel='damage'), use gold (#d69e2e)
+const jointColor = computed(() =>
+  props.crossDimensionLabel === 'accuracy' ? '#4299e1' : '#d69e2e'
+)
+const jointBorderColor = computed(() =>
+  props.crossDimensionLabel === 'accuracy' ? '#2b6cb0' : '#b7791f'
+)
+
+// Color for the condition text in the subtitle (exposed for parent use)
+const conditionColor = computed(() => props.anchorColor)
 
 const isDefenseVariant = computed(() =>
   props.anchorValuePost != null && props.jointDataPost != null
 )
 
 const chartData = computed(() => {
-  const labels = [props.anchorLabel, ...props.jointLabels]
+  // Format joint labels with dimension prefix: P(acc=0), P(acc≥1), P(acc≥2)...
+  const dimPrefix = props.crossDimensionLabel === 'accuracy' ? 'acc' : 'dmg'
+  const displayLabels = props.jointLabels.map((l, i) => {
+    if (i === 0) return `P(${dimPrefix}=0)`
+    // l is "≥N" — extract the number
+    return `P(${dimPrefix}${l})`
+  })
+  // Anchor label for the first bar (the clicked bar from the other dimension)
+  const anchorDimPrefix = props.crossDimensionLabel === 'accuracy' ? 'dmg' : 'acc'
+  const anchorDisplayLabel = props.anchorIsZeroBar
+    ? `P(${anchorDimPrefix}=0)`
+    : `P(${anchorDimPrefix}≥${props.anchorLabel.match(/\d+/)?.[0] ?? '?'})`
+  const labels = [anchorDisplayLabel, ...displayLabels]
 
   if (isDefenseVariant.value) {
-    // Defense variant: two overlaid datasets (pre + post)
     const preAnchorBg = props.anchorIsZeroBar
       ? createStripePattern('#d69e2e')
       : '#d69e2e'
@@ -84,15 +105,26 @@ const chartData = computed(() => {
         {
           label: 'Pre-Defense',
           data: preData,
-          backgroundColor: preData.map((_, i) => i === 0 ? preAnchorBg : JOINT_COLOR),
-          borderColor: preData.map((_, i) => i === 0 ? '#b7791f' : '#6b46c1'),
-          borderWidth: preData.map((_, i) => i === 0 && props.anchorIsZeroBar ? 3 : 1),
+          backgroundColor: preData.map((_, i) => {
+            if (i === 0) return preAnchorBg
+            if (i === 1) return createStripePattern(jointColor.value) // =0 bar gets stripe
+            return jointColor.value
+          }),
+          borderColor: preData.map((_, i) => {
+            if (i === 0) return '#b7791f'
+            if (i === 1) return jointColor.value // =0 bar border
+            return jointBorderColor.value
+          }),
+          borderWidth: preData.map((_, i) => (i === 0 && props.anchorIsZeroBar) || i === 1 ? 3 : 1),
         },
         {
           label: 'Post-Defense',
           data: postData,
-          backgroundColor: postData.map((_, i) => i === 0 ? postAnchorBg : JOINT_COLOR_LIGHT),
-          borderColor: postData.map((_, i) => i === 0 ? '#276749' : '#805ad5'),
+          backgroundColor: postData.map((_, i) => {
+            if (i === 0) return postAnchorBg
+            return '#48bb78'
+          }),
+          borderColor: postData.map((_, i) => i === 0 ? '#276749' : '#276749'),
           borderWidth: 1,
         },
       ],
@@ -111,9 +143,17 @@ const chartData = computed(() => {
       {
         label: `P(${props.crossDimensionLabel})`,
         data,
-        backgroundColor: data.map((_, i) => i === 0 ? anchorBg : JOINT_COLOR),
-        borderColor: data.map((_, i) => i === 0 ? props.anchorColor : '#6b46c1'),
-        borderWidth: data.map((_, i) => i === 0 && props.anchorIsZeroBar ? 3 : 1),
+        backgroundColor: data.map((_, i) => {
+          if (i === 0) return anchorBg
+          if (i === 1) return createStripePattern(jointColor.value) // =0 bar gets stripe
+          return jointColor.value
+        }),
+        borderColor: data.map((_, i) => {
+          if (i === 0) return props.anchorColor
+          if (i === 1) return jointColor.value // =0 bar border
+          return jointBorderColor.value
+        }),
+        borderWidth: data.map((_, i) => (i === 0 && props.anchorIsZeroBar) || i === 1 ? 3 : 1),
       },
     ],
   }
@@ -130,7 +170,6 @@ const chartOptions = computed(() => ({
   onClick(_event: ChartEvent, elements: ActiveElement[]) {
     if (elements.length === 0) return
     const barIndex = elements[0].index
-    // Only the anchor bar (index 0) triggers exit
     if (barIndex === 0) {
       emit('exit')
     }
@@ -200,10 +239,7 @@ const chartOptions = computed(() => ({
 </script>
 
 <template>
-  <div>
-    <p class="text-[#c4b5fd] text-xs font-semibold mb-1">{{ anchorLabel }}</p>
-    <div class="h-36">
-      <Bar :data="chartData" :options="chartOptions" />
-    </div>
+  <div class="h-full">
+    <Bar :data="chartData" :options="chartOptions" />
   </div>
 </template>

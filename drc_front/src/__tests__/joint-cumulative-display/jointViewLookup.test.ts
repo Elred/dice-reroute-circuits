@@ -91,9 +91,15 @@ describe('Property 1: Damage row extraction', () => {
           // jointData length should match accuracy_thresholds length
           expect(jointData.length).toBe(payload.accuracy_thresholds.length)
 
-          // Each value should equal matrix[X][j] * 100 (with floating-point tolerance)
+          // Index 0 is now P(=0): matrix[X][0]*100 - matrix[X][1]*100 (if ≥2 thresholds)
+          // Index j≥1: matrix[X][j] * 100
           for (let j = 0; j < expectedRow.length; j++) {
-            expect(jointData[j]).toBeCloseTo(expectedRow[j] * 100, 10)
+            if (j === 0 && expectedRow.length >= 2) {
+              const expected = Math.max(0, expectedRow[0] * 100 - expectedRow[1] * 100)
+              expect(jointData[j]).toBeCloseTo(expected, 10)
+            } else {
+              expect(jointData[j]).toBeCloseTo(expectedRow[j] * 100, 10)
+            }
           }
         },
       ),
@@ -131,9 +137,15 @@ describe('Property 2: Accuracy column extraction', () => {
           // jointData length should match damage_thresholds length
           expect(jointData.length).toBe(payload.damage_thresholds.length)
 
-          // Each value should equal matrix[i][Y] * 100 (with floating-point tolerance)
+          // Index 0 is now P(=0): matrix[0][Y]*100 - matrix[1][Y]*100 (if ≥2 thresholds)
+          // Index i≥1: matrix[i][Y] * 100
           for (let i = 0; i < payload.matrix.length; i++) {
-            expect(jointData[i]).toBeCloseTo(payload.matrix[i][barIndex] * 100, 10)
+            if (i === 0 && payload.matrix.length >= 2) {
+              const expected = Math.max(0, payload.matrix[0][barIndex] * 100 - payload.matrix[1][barIndex] * 100)
+              expect(jointData[i]).toBeCloseTo(expected, 10)
+            } else {
+              expect(jointData[i]).toBeCloseTo(payload.matrix[i][barIndex] * 100, 10)
+            }
           }
         },
       ),
@@ -164,10 +176,18 @@ describe('Property 3: Zero-damage joint computation', () => {
           // jointData length should match accuracy_thresholds length
           expect(jointData.length).toBe(payload.accuracy_thresholds.length)
 
-          // Each value should equal Math.max(0, (matrix[0][j] - matrix[1][j]) * 100)
+          // Each value: for j=0, P(dmg=0 AND acc=0) = rawData[0] - rawData[1]
+          // where rawData[j] = Math.max(0, (matrix[0][j] - matrix[1][j]) * 100)
+          // For j≥1: Math.max(0, (matrix[0][j] - matrix[1][j]) * 100)
           for (let j = 0; j < payload.accuracy_thresholds.length; j++) {
-            const expected = Math.max(0, (payload.matrix[0][j] - payload.matrix[1][j]) * 100)
-            expect(jointData[j]).toBeCloseTo(expected, 10)
+            const raw_j = Math.max(0, (payload.matrix[0][j] - payload.matrix[1][j]) * 100)
+            if (j === 0 && payload.accuracy_thresholds.length >= 2) {
+              const raw_1 = Math.max(0, (payload.matrix[0][1] - payload.matrix[1][1]) * 100)
+              const expected = Math.max(0, raw_j - raw_1)
+              expect(jointData[j]).toBeCloseTo(expected, 10)
+            } else {
+              expect(jointData[j]).toBeCloseTo(raw_j, 10)
+            }
           }
         },
       ),
@@ -198,10 +218,18 @@ describe('Property 4: Zero-accuracy joint computation', () => {
           // jointData length should match damage_thresholds length
           expect(jointData.length).toBe(payload.damage_thresholds.length)
 
-          // Each value should equal Math.max(0, (matrix[i][0] - matrix[i][1]) * 100)
+          // Each value: for i=0, P(acc=0 AND dmg=0) = rawData[0] - rawData[1]
+          // where rawData[i] = Math.max(0, (matrix[i][0] - matrix[i][1]) * 100)
+          // For i≥1: Math.max(0, (matrix[i][0] - matrix[i][1]) * 100)
           for (let i = 0; i < payload.damage_thresholds.length; i++) {
-            const expected = Math.max(0, (payload.matrix[i][0] - payload.matrix[i][1]) * 100)
-            expect(jointData[i]).toBeCloseTo(expected, 10)
+            const raw_i = Math.max(0, (payload.matrix[i][0] - payload.matrix[i][1]) * 100)
+            if (i === 0 && payload.damage_thresholds.length >= 2) {
+              const raw_1 = Math.max(0, (payload.matrix[1][0] - payload.matrix[1][1]) * 100)
+              const expected = Math.max(0, raw_i - raw_1)
+              expect(jointData[i]).toBeCloseTo(expected, 10)
+            } else {
+              expect(jointData[i]).toBeCloseTo(raw_i, 10)
+            }
           }
         },
       ),

@@ -58,16 +58,26 @@ export function extractJointData(
       // =0 damage bar: need at least 2 damage thresholds to compute
       if (damage_thresholds.length < 2) return null
       // P(damage = 0 AND accuracy ≥ y) = matrix[0][j] - matrix[1][j] for each j
-      const jointData = accuracy_thresholds.map((_, j) =>
+      const rawData = accuracy_thresholds.map((_, j) =>
         Math.max(0, (matrix[0][j] - matrix[1][j]) * 100)
       )
+      // Transform first element from P(dmg=0 AND acc≥0) to P(dmg=0 AND acc=0)
+      const jointData = rawData.map((v, j) => {
+        if (j === 0 && rawData.length >= 2) return Math.max(0, v - rawData[1])
+        return v
+      })
       const jointLabels = accuracy_thresholds.map(t => `≥${t}`)
       return { jointData, jointLabels, anchorThreshold: 0, anchorIsZeroBar: true }
     } else {
       // ≥X damage bar: row X from matrix
       const rowIndex = barIndex // barIndex 1 = ≥1, which is matrix row index 1
       if (rowIndex >= matrix.length) return null
-      const jointData = matrix[rowIndex].map(v => Math.max(0, v * 100))
+      const rawRow = matrix[rowIndex].map(v => Math.max(0, v * 100))
+      // Transform first element from P(≥0) to P(=0): P(acc=0) = P(acc≥0) - P(acc≥1)
+      const jointData = rawRow.map((v, j) => {
+        if (j === 0 && rawRow.length >= 2) return Math.max(0, v - rawRow[1])
+        return v
+      })
       const jointLabels = accuracy_thresholds.map(t => `≥${t}`)
       return { jointData, jointLabels, anchorThreshold: damage_thresholds[rowIndex], anchorIsZeroBar: false }
     }
@@ -77,16 +87,26 @@ export function extractJointData(
       // =0 accuracy bar: need at least 2 accuracy thresholds to compute
       if (accuracy_thresholds.length < 2) return null
       // P(accuracy = 0 AND damage ≥ x) = matrix[i][0] - matrix[i][1] for each i
-      const jointData = damage_thresholds.map((_, i) =>
+      const rawData = damage_thresholds.map((_, i) =>
         Math.max(0, (matrix[i][0] - matrix[i][1]) * 100)
       )
+      // Transform first element from P(acc=0 AND dmg≥0) to P(acc=0 AND dmg=0)
+      const jointData = rawData.map((v, i) => {
+        if (i === 0 && rawData.length >= 2) return Math.max(0, v - rawData[1])
+        return v
+      })
       const jointLabels = damage_thresholds.map(t => `≥${t}`)
       return { jointData, jointLabels, anchorThreshold: 0, anchorIsZeroBar: true }
     } else {
       // ≥Y accuracy bar: column Y from matrix
       const colIndex = barIndex
       if (colIndex >= (matrix[0]?.length ?? 0)) return null
-      const jointData = matrix.map(row => Math.max(0, row[colIndex] * 100))
+      const rawCol = matrix.map(row => Math.max(0, row[colIndex] * 100))
+      // Transform first element from P(≥0) to P(=0): P(dmg=0) = P(dmg≥0) - P(dmg≥1)
+      const jointData = rawCol.map((v, i) => {
+        if (i === 0 && rawCol.length >= 2) return Math.max(0, v - rawCol[1])
+        return v
+      })
       const jointLabels = damage_thresholds.map(t => `≥${t}`)
       return { jointData, jointLabels, anchorThreshold: accuracy_thresholds[colIndex], anchorIsZeroBar: false }
     }
@@ -102,14 +122,17 @@ function getAnchorValue(
   barIndex: number,
   isPreDefense: boolean,
 ): number {
-  const src = isPreDefense ? variant.pre_defense! : variant
+  // For defense variants, data lives in pre_defense/post_defense, not at top level
+  const src = isPreDefense
+    ? variant.pre_defense!
+    : (variant.post_defense ?? variant)
   if (chartType === 'damage') {
-    if (barIndex === 0) return src.damage_zero * 100
-    const entry = src.damage[barIndex]
+    if (barIndex === 0) return (src.damage_zero ?? 0) * 100
+    const entry = src.damage?.[barIndex]
     return entry ? entry[1] * 100 : 0
   } else {
-    if (barIndex === 0) return src.acc_zero * 100
-    const entry = src.accuracy[barIndex]
+    if (barIndex === 0) return (src.acc_zero ?? 0) * 100
+    const entry = src.accuracy?.[barIndex]
     return entry ? entry[1] * 100 : 0
   }
 }
@@ -133,12 +156,18 @@ export function useJointView(variant: Ref<VariantResult>) {
     if (!isClickable(v)) return
 
     const hasDefense = !!(v.pre_defense && v.post_defense)
-    const prePayload: JointCumulativePayload | undefined = hasDefense
-      ? v.pre_defense!.joint_cumulative
-      : v.joint_cumulative
-    const postPayload: JointCumulativePayload | undefined = hasDefense
-      ? v.post_defense!.joint_cumulative
-      : undefined
+
+    // Find the joint_cumulative payload — check pre_defense first, then top-level
+    let prePayload: JointCumulativePayload | undefined
+    let postPayload: JointCumulativePayload | undefined
+
+    if (hasDefense) {
+      prePayload = v.pre_defense!.joint_cumulative ?? v.joint_cumulative
+      postPayload = v.post_defense!.joint_cumulative
+    } else {
+      prePayload = v.joint_cumulative
+      postPayload = undefined
+    }
 
     if (!prePayload) return
 
@@ -155,17 +184,16 @@ export function useJointView(variant: Ref<VariantResult>) {
       const postResult = extractJointData(postPayload, chartType, barIndex)
       if (postResult) {
         jointDataPost = postResult.jointData
-        anchorValuePost = getAnchorValue(v, chartType, barIndex, false)
-        // For post-defense, get value from post_defense stats
+        // Get post-defense anchor value from post_defense stats
         if (v.post_defense) {
           if (chartType === 'damage') {
             anchorValuePost = barIndex === 0
-              ? v.post_defense.damage_zero * 100
-              : (v.post_defense.damage[barIndex]?.[1] ?? 0) * 100
+              ? (v.post_defense.damage_zero ?? 0) * 100
+              : (v.post_defense.damage?.[barIndex]?.[1] ?? 0) * 100
           } else {
             anchorValuePost = barIndex === 0
-              ? v.post_defense.acc_zero * 100
-              : (v.post_defense.accuracy[barIndex]?.[1] ?? 0) * 100
+              ? (v.post_defense.acc_zero ?? 0) * 100
+              : (v.post_defense.accuracy?.[barIndex]?.[1] ?? 0) * 100
           }
         }
       }
